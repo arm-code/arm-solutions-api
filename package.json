@@ -1,9 +1,9 @@
 {
   "name": "arm-solutions-api",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
-  "private": true,
+  "description": "API REST de herramientas para arm-solutions.com.mx",
+  "author": "Ing. Alexis Romero Mendoza",
+  "private": false,
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
