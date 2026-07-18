@@ -10,8 +10,9 @@ export default new DataSource({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    entities: ['dist/**/*.entity{.ts,.js}'],
-    migrations: ['dist/migrations/*{.ts,.js}'],
+    schema: 'armsolutions',
+    entities: ['dist/src/**/*.entity{.ts,.js}'],
+    migrations: ['dist/src/migrations/*{.ts,.js}'],
     ssl: {
         rejectUnauthorized: false,
     },

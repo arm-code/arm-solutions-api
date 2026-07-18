@@ -1,6 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AuthModule } from './modules/auth/auth.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { EventsModule } from './modules/events/events.module';
+import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
   imports: [
@@ -17,6 +26,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
+        schema: 'armsolutions',
         autoLoadEntities: true,
         synchronize: false, // ¡Falso en producción! Usaremos migraciones.
         ssl: {
@@ -24,6 +34,28 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         },
       }),
     }),
+
+    // Autenticación (global, expone SupabaseAuthGuard a toda la app)
+    AuthModule,
+
+    // Módulos de negocio (feature: finanzas, ex-business.xlsx)
+    PaymentMethodsModule,
+    CategoriesModule,
+    EventsModule,
+    TransactionsModule,
+    DashboardModule,
+  ],
+  providers: [
+    // Envuelve TODAS las respuestas exitosas en { success, message, data }
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+    // Captura TODAS las excepciones y responde en el mismo formato estándar
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
   ],
 })
-export class AppModule { }
+export class AppModule {}
