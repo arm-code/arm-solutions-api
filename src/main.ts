@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 
@@ -36,8 +36,10 @@ async function bootstrap() {
     }),
   );
 
-  // Prefijo global para la API
-  app.setGlobalPrefix('api/v1');
+  // Prefijo global para la API (excepto la raíz para health checks de Render)
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: '/', method: RequestMethod.ALL }],
+  });
 
   // 3. Configuración de OpenAPI (Swagger) y Renderizado con Scalar
   const config = new DocumentBuilder()
