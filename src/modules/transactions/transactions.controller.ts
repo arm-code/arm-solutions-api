@@ -148,6 +148,30 @@ export class TransactionsController {
     return this.transactionsService.findAll(user.id, query);
   }
 
+  @Get('summary')
+  @ResponseMessage('Resumen de transacciones obtenido exitosamente.')
+  @ApiOperation({
+    summary: 'Obtener el resumen de transacciones (totalInputs, totalOutputs, balance).',
+  })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Resumen de totales históricos.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Resumen de transacciones obtenido exitosamente.',
+        data: {
+          totalInputs: 15000,
+          totalOutputs: 5000,
+          balance: 10000,
+        },
+      },
+    },
+  })
+  getSummary(@CurrentUser() user: AuthenticatedUser) {
+    return this.transactionsService.getSummary(user.id);
+  }
+
   @Get(':id')
   @ResponseMessage('Transacción obtenida exitosamente.')
   @ApiOperation({ summary: 'Obtener una transacción por id.' })

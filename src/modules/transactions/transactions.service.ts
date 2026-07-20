@@ -120,6 +120,25 @@ export class TransactionsService {
     );
   }
 
+  async getSummary(ownerId: string): Promise<{ totalInputs: number; totalOutputs: number; balance: number }> {
+    const qb = this.transactionRepository.createQueryBuilder('transaction')
+      .select("SUM(CASE WHEN transaction.type = 'INPUT' THEN transaction.amount ELSE 0 END)", 'totalInputs')
+      .addSelect("SUM(CASE WHEN transaction.type = 'OUTPUT' THEN transaction.amount ELSE 0 END)", 'totalOutputs')
+      .where('transaction.ownerId = :ownerId', { ownerId });
+
+    const result = await qb.getRawOne();
+
+    const totalInputs = Number(result?.totalInputs || 0);
+    const totalOutputs = Number(result?.totalOutputs || 0);
+    const balance = totalInputs - totalOutputs;
+
+    return {
+      totalInputs,
+      totalOutputs,
+      balance,
+    };
+  }
+
   async findOne(ownerId: string, id: string): Promise<TransactionResponseDto> {
     const entity = await this.getOwnedEntityOrFail(ownerId, id);
     return TransactionResponseDto.fromEntity(entity);
