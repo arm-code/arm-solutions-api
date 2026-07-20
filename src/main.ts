@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import basicAuth from 'express-basic-auth';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -54,6 +55,16 @@ async function bootstrap() {
 
   // Montamos Scalar en la ruta /docs
   const { apiReference } = await import('@scalar/nestjs-api-reference');
+
+  app.use(
+    ['/docs', '/docs-json'],
+    basicAuth({
+      challenge: true,
+      users: {
+        [process.env.DOCS_USER!]: process.env.DOCS_PASSWORD!,
+      },
+    }),
+  );
 
   app.use(
     '/docs',
