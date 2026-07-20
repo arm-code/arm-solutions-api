@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { apiReference } from '@scalar/nestjs-api-reference';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -54,6 +53,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
 
   // Montamos Scalar en la ruta /docs
+  const { apiReference } = await import('@scalar/nestjs-api-reference');
+  
   app.use(
     '/docs',
     apiReference({
