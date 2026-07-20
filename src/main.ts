@@ -54,7 +54,7 @@ async function bootstrap() {
 
   // Montamos Scalar en la ruta /docs
   const { apiReference } = await import('@scalar/nestjs-api-reference');
-  
+
   app.use(
     '/docs',
     apiReference({
@@ -65,7 +65,7 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3500;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`Aplicación corriendo en: http://localhost:${port}/api/v1`);
   logger.log(
     `Documentación (Scalar) disponible en: http://localhost:${port}/docs`,
