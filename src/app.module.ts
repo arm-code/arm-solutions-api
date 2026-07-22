@@ -9,6 +9,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { EventsModule } from './modules/events/events.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { SalesNotesModule } from './modules/sales-notes/sales-notes.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     EventsModule,
     TransactionsModule,
     DashboardModule,
+    SalesNotesModule,
   ],
   providers: [
     // Envuelve TODAS las respuestas exitosas en { success, message, data }
