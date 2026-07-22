@@ -3,8 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -26,12 +24,12 @@ import { BusinessEventResponseDto } from './dto/business-event-response.dto';
 import { CreateBusinessEventDto } from './dto/create-business-event.dto';
 import { QueryBusinessEventDto } from './dto/query-business-event.dto';
 import { UpdateBusinessEventDto } from './dto/update-business-event.dto';
+import { UpdateEventStatusDto } from './dto/update-event-status.dto';
 import { EventsService } from './events.service';
 
 /**
- * Eventos/proyectos/clientes a los que se asocian transacciones
- * (ej. "EVENTO NEGRO TALIBAN"). Cada evento pertenece exclusivamente al
- * usuario autenticado que lo creó (`owner_id`).
+ * Módulo de Gestión de Eventos y Alquiler de Mobiliario (`BusinessEvents`).
+ * Cada evento pertenece exclusivamente al usuario autenticado (`owner_id`).
  */
 @ApiTags('Business Events')
 @ApiBearerAuth()
@@ -42,26 +40,10 @@ export class EventsController {
 
   @Post()
   @ResponseMessage('Evento creado exitosamente.')
-  @ApiOperation({ summary: 'Crear un nuevo evento/proyecto.' })
+  @ApiOperation({ summary: 'Crear un nuevo evento de mobiliario.' })
   @SwaggerApiResponse({
     status: 201,
-    description: 'Evento creado.',
-    schema: {
-      example: {
-        success: true,
-        message: 'Evento creado exitosamente.',
-        data: {
-          id: 'e1f1b2c4-1234-4d5e-8f6a-000000000003',
-          name: 'EVENTO NEGRO TALIBAN',
-          clientName: 'Juan Pérez',
-          eventDate: '2026-07-17',
-          notes: '10 mesas + 80 sillas + brincolín.',
-          isActive: true,
-          createdAt: '2026-07-17T10:00:00.000Z',
-          updatedAt: '2026-07-17T10:00:00.000Z',
-        },
-      },
-    },
+    description: 'Evento creado exitosamente.',
   })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -74,7 +56,7 @@ export class EventsController {
   @ResponseMessage('Eventos obtenidos exitosamente.')
   @ApiOperation({
     summary:
-      'Listar eventos del usuario autenticado (paginado, búsqueda, filtro).',
+      'Listar eventos del usuario autenticado con filtros (tab, status, search, paginación).',
   })
   findAll(
     @CurrentUser() user: AuthenticatedUser,
@@ -87,7 +69,7 @@ export class EventsController {
   @ResponseMessage('Evento obtenido exitosamente.')
   @ApiOperation({
     summary:
-      'Obtener un evento por id, incluyendo su balance financiero (ingresos, egresos, neto).',
+      'Obtener detalle de un evento por ID incluyendo balance financiero e información vinculada.',
   })
   @SwaggerApiResponse({
     status: 404,
@@ -115,22 +97,35 @@ export class EventsController {
     return this.eventsService.update(user.id, id, dto);
   }
 
+  @Patch(':id/status')
+  @ResponseMessage('Estado del evento actualizado exitosamente.')
+  @ApiOperation({ summary: 'Cambio rápido de estado de un evento.' })
+  @SwaggerApiResponse({
+    status: 404,
+    description: 'No encontrado o pertenece a otro usuario.',
+  })
+  updateStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateEventStatusDto,
+  ): Promise<BusinessEventResponseDto> {
+    return this.eventsService.updateStatus(user.id, id, dto.status);
+  }
+
   @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Evento desactivado exitosamente.')
+  @ResponseMessage('Evento cancelado exitosamente.')
   @ApiOperation({
     summary:
-      'Desactivar un evento (soft delete, preserva histórico de transacciones).',
+      'Cancelar evento (cambia el estado a cancelled para conservar el histórico).',
   })
   @SwaggerApiResponse({
     status: 404,
     description: 'No encontrado o pertenece a otro usuario.',
   })
-  async remove(
+  remove(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<null> {
-    await this.eventsService.remove(user.id, id);
-    return null;
+  ): Promise<BusinessEventResponseDto> {
+    return this.eventsService.remove(user.id, id);
   }
 }
