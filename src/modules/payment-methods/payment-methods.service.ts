@@ -19,19 +19,23 @@ export class PaymentMethodsService {
     private readonly paymentMethodRepository: Repository<PaymentMethod>,
   ) {}
 
-  async create(dto: CreatePaymentMethodDto): Promise<PaymentMethodResponseDto> {
+  async create(
+    businessId: string,
+    dto: CreatePaymentMethodDto,
+  ): Promise<PaymentMethodResponseDto> {
     const code = dto.code.trim().toUpperCase();
 
     const existing = await this.paymentMethodRepository.findOne({
-      where: { code },
+      where: { code, businessId },
     });
     if (existing) {
       throw new ConflictException(
-        `Ya existe un método de pago con el código "${code}".`,
+        `Ya existe un método de pago con el código "${code}" en este negocio.`,
       );
     }
 
     const entity = this.paymentMethodRepository.create({
+      businessId,
       code,
       name: dto.name.trim(),
       isActive: dto.isActive ?? true,
@@ -42,9 +46,12 @@ export class PaymentMethodsService {
   }
 
   async findAll(
+    businessId: string,
     query: QueryPaymentMethodDto,
   ): Promise<PaginatedResultDto<PaymentMethodResponseDto>> {
-    const qb = this.paymentMethodRepository.createQueryBuilder('paymentMethod');
+    const qb = this.paymentMethodRepository
+      .createQueryBuilder('paymentMethod')
+      .where('paymentMethod.businessId = :businessId', { businessId });
 
     if (query.isActive !== undefined) {
       qb.andWhere('paymentMethod.isActive = :isActive', {
@@ -76,25 +83,29 @@ export class PaymentMethodsService {
     );
   }
 
-  async findOne(id: string): Promise<PaymentMethodResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+  async findOne(
+    businessId: string,
+    id: string,
+  ): Promise<PaymentMethodResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     return PaymentMethodResponseDto.fromEntity(entity);
   }
 
   async update(
+    businessId: string,
     id: string,
     dto: UpdatePaymentMethodDto,
   ): Promise<PaymentMethodResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     if (dto.code && dto.code.trim().toUpperCase() !== entity.code) {
       const code = dto.code.trim().toUpperCase();
       const existing = await this.paymentMethodRepository.findOne({
-        where: { code },
+        where: { code, businessId },
       });
       if (existing) {
         throw new ConflictException(
-          `Ya existe un método de pago con el código "${code}".`,
+          `Ya existe un método de pago con el código "${code}" en este negocio.`,
         );
       }
       entity.code = code;
@@ -107,17 +118,18 @@ export class PaymentMethodsService {
     return PaymentMethodResponseDto.fromEntity(saved);
   }
 
-  async remove(id: string): Promise<void> {
-    const entity = await this.getEntityOrFail(id);
-    // Soft delete lógico: se desactiva en vez de borrar para preservar la
-    // integridad referencial e historial de transacciones ya registradas.
+  async remove(businessId: string, id: string): Promise<void> {
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.isActive = false;
     await this.paymentMethodRepository.save(entity);
   }
 
-  private async getEntityOrFail(id: string): Promise<PaymentMethod> {
+  private async getEntityOrFail(
+    businessId: string,
+    id: string,
+  ): Promise<PaymentMethod> {
     const entity = await this.paymentMethodRepository.findOne({
-      where: { id },
+      where: { id, businessId },
     });
     if (!entity) {
       throw new NotFoundException(

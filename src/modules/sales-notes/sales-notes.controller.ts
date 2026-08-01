@@ -12,14 +12,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { CreateSalesNoteDto } from './dto/create-sales-note.dto';
 import { QuerySalesNotesDto } from './dto/query-sales-notes.dto';
 import { SalesNoteResponseDto } from './dto/sales-note-response.dto';
@@ -33,7 +34,12 @@ import { SalesNotesService } from './sales-notes.service';
  */
 @ApiTags('Sales Notes')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('sales-notes')
 export class SalesNotesController {
   constructor(private readonly salesNotesService: SalesNotesService) {}
@@ -46,10 +52,10 @@ export class SalesNotesController {
     description: 'Creada exitosamente.',
   })
   create(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
-    return this.salesNotesService.create(user.id, dto);
+    return this.salesNotesService.create(businessId, dto);
   }
 
   @Get()
@@ -58,8 +64,11 @@ export class SalesNotesController {
     summary:
       'Obtener notas de venta y cotizaciones paginadas con filtros (status, eventId, search).',
   })
-  findAll(@Query() query: QuerySalesNotesDto) {
-    return this.salesNotesService.findAll(query);
+  findAll(
+    @CurrentBusiness() businessId: string,
+    @Query() query: QuerySalesNotesDto,
+  ) {
+    return this.salesNotesService.findAll(businessId, query);
   }
 
   @Get(':id')
@@ -72,8 +81,11 @@ export class SalesNotesController {
     status: 404,
     description: 'No encontrada.',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.salesNotesService.findOne(id);
+  findOne(
+    @CurrentBusiness() businessId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.salesNotesService.findOne(businessId, id);
   }
 
   @Patch(':id')
@@ -84,10 +96,11 @@ export class SalesNotesController {
     description: 'No encontrada.',
   })
   update(
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
-    return this.salesNotesService.update(id, dto);
+    return this.salesNotesService.update(businessId, id, dto);
   }
 
   @Patch(':id/status')
@@ -100,10 +113,11 @@ export class SalesNotesController {
     description: 'No encontrada.',
   })
   updateStatus(
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSalesNoteStatusDto,
   ): Promise<SalesNoteResponseDto> {
-    return this.salesNotesService.updateStatus(id, dto.status);
+    return this.salesNotesService.updateStatus(businessId, id, dto.status);
   }
 
   @Delete(':id')
@@ -114,8 +128,9 @@ export class SalesNotesController {
     description: 'No encontrada.',
   })
   remove(
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<SalesNoteResponseDto> {
-    return this.salesNotesService.remove(id);
+    return this.salesNotesService.remove(businessId, id);
   }
 }

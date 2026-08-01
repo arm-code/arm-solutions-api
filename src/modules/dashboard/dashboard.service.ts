@@ -28,7 +28,7 @@ export class DashboardService {
    *   I3 =SUMIFS(... TRANSFER) - SUMIFS(... TRANSFER)       -> availableTransfer
    */
   async getSummary(
-    ownerId: string,
+    businessId: string,
     query: DashboardQueryDto,
   ): Promise<DashboardSummaryResponseDto> {
     const qb = this.transactionRepository
@@ -37,7 +37,7 @@ export class DashboardService {
       .select('paymentMethod.code', 'paymentMethodCode')
       .addSelect('t.type', 'type')
       .addSelect('COALESCE(SUM(t.amount), 0)', 'total')
-      .where('t.ownerId = :ownerId', { ownerId })
+      .where('t.businessId = :businessId', { businessId })
       .groupBy('paymentMethod.code')
       .addGroupBy('t.type');
 

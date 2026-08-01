@@ -16,13 +16,19 @@ export interface StockSnapshot {
 }
 
 @Entity({ name: 'movements_inv', schema: 'armsolutions' })
+@Index(['businessId'])
 @Index(['ownerId'])
 @Index(['itemId'])
 @Index(['type'])
 @Index(['createdAt'])
 export class InventoryMovement extends BaseEntity {
+  /** @deprecated Usar businessId para filtros. */
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
+
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid' })
+  businessId: string;
 
   @ManyToOne(() => InventoryItem, { onDelete: 'RESTRICT', nullable: false })
   @JoinColumn({ name: 'item_id' })

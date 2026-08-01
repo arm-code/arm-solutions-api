@@ -12,10 +12,16 @@ export interface CategoryAttributeDefinition {
 }
 
 @Entity({ name: 'categories_inv', schema: 'armsolutions' })
+@Index(['businessId'])
 @Index(['ownerId'])
 export class InventoryCategory extends BaseEntity {
+  /** @deprecated Usar businessId para filtros. */
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
+
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid' })
+  businessId: string;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;

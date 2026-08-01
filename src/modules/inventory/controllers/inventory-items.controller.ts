@@ -14,14 +14,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../../common/interceptors/transform.interceptor';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentBusiness } from '../../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
-import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import { TenantGuard } from '../../auth/guards/tenant.guard';
 import { CreateInventoryItemDto } from '../dto/item/create-inventory-item.dto';
 import { QueryInventoryItemsDto } from '../dto/item/query-inventory-items.dto';
 import { UpdateInventoryItemDto } from '../dto/item/update-inventory-item.dto';
@@ -29,7 +30,8 @@ import { InventoryItemsService } from '../services/inventory-items.service';
 
 @ApiTags('Inventory - Items')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({ name: 'X-Business-ID', required: true, description: 'UUID del negocio activo.' })
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('inventory/items')
 export class InventoryItemsController {
   constructor(private readonly service: InventoryItemsService) {}
@@ -40,10 +42,10 @@ export class InventoryItemsController {
     summary: 'Listar ítems de inventario paginados. Filtros: search, categoryId, status, type.',
   })
   findAll(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Query() query: QueryInventoryItemsDto,
   ) {
-    return this.service.findAll(user.id, query);
+    return this.service.findAll(businessId, query);
   }
 
   @Get(':id')
@@ -54,10 +56,10 @@ export class InventoryItemsController {
   })
   @ApiResponse({ status: 404, description: 'Ítem no encontrado.' })
   findOne(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.service.findOne(user.id, id);
+    return this.service.findOne(businessId, id);
   }
 
   @Post()
@@ -65,10 +67,10 @@ export class InventoryItemsController {
   @ApiOperation({ summary: 'Crear un nuevo ítem de inventario.' })
   @ApiResponse({ status: 409, description: 'El SKU ya existe para este negocio.' })
   create(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreateInventoryItemDto,
   ) {
-    return this.service.create(user.id, dto);
+    return this.service.create(businessId, dto);
   }
 
   @Put(':id')
@@ -77,11 +79,11 @@ export class InventoryItemsController {
   @ApiResponse({ status: 404, description: 'Ítem no encontrado.' })
   @ApiResponse({ status: 409, description: 'El SKU ya existe para este negocio.' })
   update(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateInventoryItemDto,
   ) {
-    return this.service.update(user.id, id, dto);
+    return this.service.update(businessId, id, dto);
   }
 
   @Delete(':id')
@@ -92,9 +94,9 @@ export class InventoryItemsController {
   })
   @ApiResponse({ status: 404, description: 'Ítem no encontrado.' })
   remove(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.service.remove(user.id, id);
+    return this.service.remove(businessId, id);
   }
 }

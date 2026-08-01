@@ -11,10 +11,15 @@ import { Transaction } from '../../transactions/entities/transaction.entity';
  * evita duplicación y errores de escritura del valor de texto.
  */
 @Entity({ name: 'transaction_categories', schema: 'armsolutions' })
+@Index(['businessId', 'code'], { unique: true })
 export class TransactionCategory extends BaseEntity {
-  @Index({ unique: true })
+  /** Negocio al que pertenece esta categoría. */
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId: string | null;
+
   @Column({ type: 'varchar', length: 50 })
-  code: string; // RENTA, GASOLINA, COMIDAS...
+  code: string;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;

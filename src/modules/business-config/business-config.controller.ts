@@ -11,12 +11,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { BusinessConfigService } from './business-config.service';
 import { BusinessConfigResponseDto } from './dto/business-config-response.dto';
 import { CreatePaymentCardDto } from './dto/create-payment-card.dto';
@@ -28,7 +31,12 @@ import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
  */
 @ApiTags('Business Config')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('config')
 export class BusinessConfigController {
   constructor(
@@ -46,8 +54,10 @@ export class BusinessConfigController {
     description: 'Configuración de la empresa.',
     type: BusinessConfigResponseDto,
   })
-  getConfig(): Promise<BusinessConfigResponseDto> {
-    return this.businessConfigService.getConfig();
+  getConfig(
+    @CurrentBusiness() businessId: string,
+  ): Promise<BusinessConfigResponseDto> {
+    return this.businessConfigService.getConfig(businessId);
   }
 
   @Patch()
@@ -61,9 +71,10 @@ export class BusinessConfigController {
     type: BusinessConfigResponseDto,
   })
   updateConfig(
+    @CurrentBusiness() businessId: string,
     @Body() dto: UpdateBusinessConfigDto,
   ): Promise<BusinessConfigResponseDto> {
-    return this.businessConfigService.updateConfig(dto);
+    return this.businessConfigService.updateConfig(businessId, dto);
   }
 
   @Post('cards')
@@ -77,9 +88,10 @@ export class BusinessConfigController {
     type: BusinessConfigResponseDto,
   })
   addPaymentCard(
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreatePaymentCardDto,
   ): Promise<BusinessConfigResponseDto> {
-    return this.businessConfigService.addPaymentCard(dto);
+    return this.businessConfigService.addPaymentCard(businessId, dto);
   }
 
   @Delete('cards/:cardId')
@@ -91,8 +103,9 @@ export class BusinessConfigController {
     type: BusinessConfigResponseDto,
   })
   removePaymentCard(
+    @CurrentBusiness() businessId: string,
     @Param('cardId', ParseUUIDPipe) cardId: string,
   ): Promise<BusinessConfigResponseDto> {
-    return this.businessConfigService.removePaymentCard(cardId);
+    return this.businessConfigService.removePaymentCard(businessId, cardId);
   }
 }

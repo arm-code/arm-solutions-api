@@ -19,17 +19,23 @@ export class CategoriesService {
     private readonly categoryRepository: Repository<TransactionCategory>,
   ) {}
 
-  async create(dto: CreateCategoryDto): Promise<CategoryResponseDto> {
+  async create(
+    businessId: string,
+    dto: CreateCategoryDto,
+  ): Promise<CategoryResponseDto> {
     const code = dto.code.trim().toUpperCase();
 
-    const existing = await this.categoryRepository.findOne({ where: { code } });
+    const existing = await this.categoryRepository.findOne({
+      where: { code, businessId },
+    });
     if (existing) {
       throw new ConflictException(
-        `Ya existe una categoría con el código "${code}".`,
+        `Ya existe una categoría con el código "${code}" en este negocio.`,
       );
     }
 
     const entity = this.categoryRepository.create({
+      businessId,
       code,
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
@@ -41,9 +47,12 @@ export class CategoriesService {
   }
 
   async findAll(
+    businessId: string,
     query: QueryCategoryDto,
   ): Promise<PaginatedResultDto<CategoryResponseDto>> {
-    const qb = this.categoryRepository.createQueryBuilder('category');
+    const qb = this.categoryRepository
+      .createQueryBuilder('category')
+      .where('category.businessId = :businessId', { businessId });
 
     if (query.isActive !== undefined) {
       qb.andWhere('category.isActive = :isActive', {
@@ -75,25 +84,29 @@ export class CategoriesService {
     );
   }
 
-  async findOne(id: string): Promise<CategoryResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+  async findOne(
+    businessId: string,
+    id: string,
+  ): Promise<CategoryResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     return CategoryResponseDto.fromEntity(entity);
   }
 
   async update(
+    businessId: string,
     id: string,
     dto: UpdateCategoryDto,
   ): Promise<CategoryResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     if (dto.code && dto.code.trim().toUpperCase() !== entity.code) {
       const code = dto.code.trim().toUpperCase();
       const existing = await this.categoryRepository.findOne({
-        where: { code },
+        where: { code, businessId },
       });
       if (existing) {
         throw new ConflictException(
-          `Ya existe una categoría con el código "${code}".`,
+          `Ya existe una categoría con el código "${code}" en este negocio.`,
         );
       }
       entity.code = code;
@@ -108,14 +121,19 @@ export class CategoriesService {
     return CategoryResponseDto.fromEntity(saved);
   }
 
-  async remove(id: string): Promise<void> {
-    const entity = await this.getEntityOrFail(id);
-    entity.isActive = false; // soft delete, preserva histórico de transacciones
+  async remove(businessId: string, id: string): Promise<void> {
+    const entity = await this.getEntityOrFail(businessId, id);
+    entity.isActive = false;
     await this.categoryRepository.save(entity);
   }
 
-  private async getEntityOrFail(id: string): Promise<TransactionCategory> {
-    const entity = await this.categoryRepository.findOne({ where: { id } });
+  private async getEntityOrFail(
+    businessId: string,
+    id: string,
+  ): Promise<TransactionCategory> {
+    const entity = await this.categoryRepository.findOne({
+      where: { id, businessId },
+    });
     if (!entity) {
       throw new NotFoundException(
         `No se encontró la categoría con id "${id}".`,

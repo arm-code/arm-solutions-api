@@ -23,11 +23,11 @@ export class SalesNotesService {
   ) {}
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
     if (dto.eventId) {
-      await this.verifyEventExists(dto.eventId);
+      await this.verifyEventExists(businessId, dto.eventId);
     }
 
     const applyIva = dto.applyIva ?? false;
@@ -56,7 +56,8 @@ export class SalesNotesService {
     const totalNum = Number((subtotalNum + ivaAmountNum).toFixed(2));
 
     const noteEntity = this.noteRepository.create({
-      ownerId,
+      businessId,
+      ownerId: businessId,
       status: dto.status ?? SalesNoteStatus.NOTE,
       customerName: dto.customerName.trim(),
       customerPhone: dto.customerPhone?.trim() ?? null,
@@ -74,16 +75,18 @@ export class SalesNotesService {
     });
 
     const saved = await this.noteRepository.save(noteEntity);
-    const reloaded = await this.getEntityOrFail(saved.id);
+    const reloaded = await this.getEntityOrFail(businessId, saved.id);
     return SalesNoteResponseDto.fromEntity(reloaded);
   }
 
   async findAll(
+    businessId: string,
     query: QuerySalesNotesDto,
   ): Promise<PaginatedResultDto<SalesNoteResponseDto>> {
     const qb = this.noteRepository
       .createQueryBuilder('note')
-      .leftJoinAndSelect('note.items', 'items');
+      .leftJoinAndSelect('note.items', 'items')
+      .where('note.businessId = :businessId', { businessId });
 
     if (query.isActive !== undefined) {
       qb.andWhere('note.isActive = :isActive', { isActive: query.isActive });
@@ -123,20 +126,24 @@ export class SalesNotesService {
     );
   }
 
-  async findOne(id: string): Promise<SalesNoteResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+  async findOne(
+    businessId: string,
+    id: string,
+  ): Promise<SalesNoteResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     return SalesNoteResponseDto.fromEntity(entity);
   }
 
   async update(
+    businessId: string,
     id: string,
     dto: UpdateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     if (dto.eventId !== undefined) {
       if (dto.eventId) {
-        await this.verifyEventExists(dto.eventId);
+        await this.verifyEventExists(businessId, dto.eventId);
       }
       entity.eventId = dto.eventId ?? null;
     }
@@ -195,30 +202,37 @@ export class SalesNotesService {
     entity.total = totalNum.toFixed(2);
 
     await this.noteRepository.save(entity);
-    const reloaded = await this.getEntityOrFail(id);
+    const reloaded = await this.getEntityOrFail(businessId, id);
     return SalesNoteResponseDto.fromEntity(reloaded);
   }
 
   async updateStatus(
+    businessId: string,
     id: string,
     status: SalesNoteStatus,
   ): Promise<SalesNoteResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.status = status;
     await this.noteRepository.save(entity);
-    const reloaded = await this.getEntityOrFail(id);
+    const reloaded = await this.getEntityOrFail(businessId, id);
     return SalesNoteResponseDto.fromEntity(reloaded);
   }
 
-  async remove(id: string): Promise<SalesNoteResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+  async remove(
+    businessId: string,
+    id: string,
+  ): Promise<SalesNoteResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     await this.noteRepository.remove(entity);
     return SalesNoteResponseDto.fromEntity(entity);
   }
 
-  private async getEntityOrFail(id: string): Promise<SalesNote> {
+  private async getEntityOrFail(
+    businessId: string,
+    id: string,
+  ): Promise<SalesNote> {
     const entity = await this.noteRepository.findOne({
-      where: { id },
+      where: { id, businessId },
       relations: ['items', 'event'],
     });
     if (!entity) {
@@ -229,8 +243,14 @@ export class SalesNotesService {
     return entity;
   }
 
-  private async verifyEventExists(eventId: string): Promise<void> {
-    const exists = await this.eventRepository.existsBy({ id: eventId });
+  private async verifyEventExists(
+    businessId: string,
+    eventId: string,
+  ): Promise<void> {
+    const exists = await this.eventRepository.existsBy({
+      id: eventId,
+      businessId,
+    });
     if (!exists) {
       throw new NotFoundException(
         `No se encontró el evento con id "${eventId}".`,

@@ -24,11 +24,12 @@ export class EventsService {
   ) {}
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
     const entity = this.eventRepository.create({
-      ownerId,
+      businessId,
+      ownerId: businessId, // mantenido para retrocompatibilidad
       name: dto.name.trim(),
       eventDate: dto.eventDate,
       clientName: dto.clientName.trim(),
@@ -43,15 +44,17 @@ export class EventsService {
     });
 
     const saved = await this.eventRepository.save(entity);
-    const reloaded = await this.getEntityOrFail(saved.id);
+    const reloaded = await this.getEntityOrFail(businessId, saved.id);
     return BusinessEventResponseDto.fromEntity(reloaded);
   }
 
   async findAll(
-    _ownerId: string,
+    businessId: string,
     query: QueryBusinessEventDto,
   ): Promise<PaginatedResultDto<BusinessEventResponseDto>> {
-    const qb = this.eventRepository.createQueryBuilder('event');
+    const qb = this.eventRepository
+      .createQueryBuilder('event')
+      .where('event.businessId = :businessId', { businessId });
 
     if (query.isActive !== undefined) {
       qb.andWhere('event.isActive = :isActive', { isActive: query.isActive });
@@ -102,10 +105,10 @@ export class EventsService {
   }
 
   async findOne(
-    _ownerId: string,
+    businessId: string,
     id: string,
   ): Promise<BusinessEventBalanceResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     const [incomeResult, expenseResult] = await Promise.all([
       this.transactionRepository
@@ -139,11 +142,11 @@ export class EventsService {
   }
 
   async update(
-    _ownerId: string,
+    businessId: string,
     id: string,
     dto: UpdateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     if (dto.name !== undefined) entity.name = dto.name.trim();
     if (dto.eventDate !== undefined) entity.eventDate = dto.eventDate;
@@ -166,26 +169,26 @@ export class EventsService {
   }
 
   async updateStatus(
-    _ownerId: string,
+    businessId: string,
     id: string,
     status: EventStatus,
   ): Promise<BusinessEventResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.status = status;
     const saved = await this.eventRepository.save(entity);
     return BusinessEventResponseDto.fromEntity(saved);
   }
 
-  async remove(_ownerId: string, id: string): Promise<BusinessEventResponseDto> {
-    const entity = await this.getEntityOrFail(id);
+  async remove(businessId: string, id: string): Promise<BusinessEventResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.status = EventStatus.CANCELLED;
     const saved = await this.eventRepository.save(entity);
     return BusinessEventResponseDto.fromEntity(saved);
   }
 
-  private async getEntityOrFail(id: string): Promise<BusinessEvent> {
+  private async getEntityOrFail(businessId: string, id: string): Promise<BusinessEvent> {
     const entity = await this.eventRepository.findOne({
-      where: { id },
+      where: { id, businessId },
     });
     if (!entity) {
       throw new NotFoundException(`No se encontró el evento con id "${id}".`);

@@ -20,20 +20,21 @@ export class InventoryCategoriesService {
     private readonly itemRepo: Repository<InventoryItem>,
   ) {}
 
-  async findAll(ownerId: string): Promise<InventoryCategoryResponseDto[]> {
+  async findAll(businessId: string): Promise<InventoryCategoryResponseDto[]> {
     const cats = await this.categoryRepo.find({
-      where: { ownerId, isActive: true },
+      where: { businessId, isActive: true },
       order: { name: 'ASC' },
     });
     return cats.map(InventoryCategoryResponseDto.fromEntity);
   }
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateInventoryCategoryDto,
   ): Promise<InventoryCategoryResponseDto> {
     const entity = this.categoryRepo.create({
-      ownerId,
+      businessId,
+      ownerId: businessId,
       name: dto.name.trim(),
       color: dto.color ?? '#6b7280',
       attributes: dto.attributes ?? [],
@@ -44,11 +45,11 @@ export class InventoryCategoriesService {
   }
 
   async update(
-    ownerId: string,
+    businessId: string,
     id: string,
     dto: UpdateInventoryCategoryDto,
   ): Promise<InventoryCategoryResponseDto> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+    const entity = await this.getEntityOrFail(businessId, id);
     if (dto.name !== undefined) entity.name = dto.name.trim();
     if (dto.color !== undefined) entity.color = dto.color;
     if (dto.attributes !== undefined) entity.attributes = dto.attributes;
@@ -56,12 +57,11 @@ export class InventoryCategoriesService {
     return InventoryCategoryResponseDto.fromEntity(saved);
   }
 
-  async remove(ownerId: string, id: string): Promise<void> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+  async remove(businessId: string, id: string): Promise<void> {
+    const entity = await this.getEntityOrFail(businessId, id);
 
-    // Regla de negocio: no borrar si tiene ítems activos asociados
     const activeItemsCount = await this.itemRepo.count({
-      where: { ownerId, categoryId: id, isActive: true },
+      where: { businessId, categoryId: id, isActive: true },
     });
     if (activeItemsCount > 0) {
       throw new ConflictException(
@@ -75,11 +75,11 @@ export class InventoryCategoriesService {
   }
 
   private async getEntityOrFail(
-    ownerId: string,
+    businessId: string,
     id: string,
   ): Promise<InventoryCategory> {
     const entity = await this.categoryRepo.findOne({
-      where: { id, ownerId, isActive: true },
+      where: { id, businessId, isActive: true },
     });
     if (!entity) {
       throw new NotFoundException(

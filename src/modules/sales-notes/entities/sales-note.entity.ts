@@ -5,10 +5,14 @@ import { SalesNoteStatus } from '../enums/sales-note-status.enum';
 import { SalesNoteItem } from './sales-note-item.entity';
 
 @Entity({ name: 'sales_notes', schema: 'armsolutions' })
+@Index(['businessId'])
 @Index(['ownerId'])
 @Index(['status'])
 @Index(['eventId'])
 export class SalesNote extends BaseEntity {
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId: string | null;
+
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
 

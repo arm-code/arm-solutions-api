@@ -25,7 +25,7 @@ export class InventoryMovementsService {
   ) {}
 
   async findAll(
-    ownerId: string,
+    businessId: string,
     query: QueryInventoryMovementsDto,
   ): Promise<PaginatedResultDto<InventoryMovementResponseDto>> {
     const qb = this.movementRepo
@@ -33,7 +33,7 @@ export class InventoryMovementsService {
       .leftJoinAndSelect('mv.item', 'item')
       .leftJoinAndSelect('mv.originLocation', 'origin')
       .leftJoinAndSelect('mv.destinationLocation', 'dest')
-      .where('mv.ownerId = :ownerId', { ownerId });
+      .where('mv.businessId = :businessId', { businessId });
 
     if (query.itemId) {
       qb.andWhere('mv.itemId = :itemId', { itemId: query.itemId });
@@ -82,7 +82,7 @@ export class InventoryMovementsService {
    *                 = quantity - stockReserved - stockRented
    */
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateInventoryMovementDto,
   ): Promise<InventoryMovementResponseDto> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -94,9 +94,9 @@ export class InventoryMovementsService {
       const item = await queryRunner.manager
         .createQueryBuilder(InventoryItem, 'item')
         .setLock('pessimistic_write')
-        .where('item.id = :id AND item.ownerId = :ownerId', {
+        .where('item.id = :id AND item.businessId = :businessId', {
           id: dto.itemId,
-          ownerId,
+          businessId,
         })
         .getOne();
 
@@ -161,7 +161,8 @@ export class InventoryMovementsService {
 
       // 6. Crear y persistir el movimiento con snapshots
       const movement = queryRunner.manager.create(InventoryMovement, {
-        ownerId,
+        businessId,
+        ownerId: businessId,
         itemId: dto.itemId,
         type: dto.type,
         quantity: dto.quantity,

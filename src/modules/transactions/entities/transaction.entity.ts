@@ -28,11 +28,17 @@ import { TransactionCategory } from '../../categories/entities/transaction-categ
  *    movimientos (se refuerza con Row Level Security en la base de datos).
  */
 @Entity({ name: 'transactions', schema: 'armsolutions' })
-@Index(['ownerId', 'transactionDate'])
-@Index(['ownerId', 'type'])
+@Index(['businessId', 'transactionDate'])
+@Index(['businessId', 'type'])
 export class Transaction extends BaseEntity {
+  /** @deprecated Usar businessId para filtros. Mantenido para backfill. */
   @Column({ name: 'owner_id', type: 'uuid' })
-  ownerId: string; // referencia a auth.users(id) de Supabase
+  ownerId: string;
+
+  /** Negocio (tenant) al que pertenece esta transacción. */
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid' })
+  businessId: string;
 
   @Column({ name: 'folio_number', type: 'integer' })
   @Index()

@@ -13,20 +13,21 @@ export class InventoryLocationsService {
     private readonly locationRepo: Repository<InventoryLocation>,
   ) {}
 
-  async findAll(ownerId: string): Promise<InventoryLocationResponseDto[]> {
+  async findAll(businessId: string): Promise<InventoryLocationResponseDto[]> {
     const locs = await this.locationRepo.find({
-      where: { ownerId, isActive: true },
+      where: { businessId, isActive: true },
       order: { name: 'ASC' },
     });
     return locs.map(InventoryLocationResponseDto.fromEntity);
   }
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateInventoryLocationDto,
   ): Promise<InventoryLocationResponseDto> {
     const entity = this.locationRepo.create({
-      ownerId,
+      businessId,
+      ownerId: businessId,
       name: dto.name.trim(),
       type: dto.type,
       isActive: true,
@@ -36,29 +37,29 @@ export class InventoryLocationsService {
   }
 
   async update(
-    ownerId: string,
+    businessId: string,
     id: string,
     dto: UpdateInventoryLocationDto,
   ): Promise<InventoryLocationResponseDto> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+    const entity = await this.getEntityOrFail(businessId, id);
     if (dto.name !== undefined) entity.name = dto.name.trim();
     if (dto.type !== undefined) entity.type = dto.type;
     const saved = await this.locationRepo.save(entity);
     return InventoryLocationResponseDto.fromEntity(saved);
   }
 
-  async remove(ownerId: string, id: string): Promise<void> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+  async remove(businessId: string, id: string): Promise<void> {
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.isActive = false;
     await this.locationRepo.save(entity);
   }
 
   private async getEntityOrFail(
-    ownerId: string,
+    businessId: string,
     id: string,
   ): Promise<InventoryLocation> {
     const entity = await this.locationRepo.findOne({
-      where: { id, ownerId, isActive: true },
+      where: { id, businessId, isActive: true },
     });
     if (!entity) {
       throw new NotFoundException(

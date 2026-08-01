@@ -14,12 +14,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { PaymentMethodResponseDto } from './dto/payment-method-response.dto';
 import { QueryPaymentMethodDto } from './dto/query-payment-method.dto';
@@ -34,7 +37,12 @@ import { PaymentMethodsService } from './payment-methods.service';
  */
 @ApiTags('Payment Methods')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('payment-methods')
 export class PaymentMethodsController {
   constructor(private readonly paymentMethodsService: PaymentMethodsService) {}
@@ -62,9 +70,10 @@ export class PaymentMethodsController {
   })
   @SwaggerApiResponse({ status: 409, description: 'El código ya existe.' })
   create(
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreatePaymentMethodDto,
   ): Promise<PaymentMethodResponseDto> {
-    return this.paymentMethodsService.create(dto);
+    return this.paymentMethodsService.create(businessId, dto);
   }
 
   @Get()
@@ -102,8 +111,11 @@ export class PaymentMethodsController {
       },
     },
   })
-  findAll(@Query() query: QueryPaymentMethodDto) {
-    return this.paymentMethodsService.findAll(query);
+  findAll(
+    @CurrentBusiness() businessId: string,
+    @Query() query: QueryPaymentMethodDto,
+  ) {
+    return this.paymentMethodsService.findAll(businessId, query);
   }
 
   @Get(':id')
@@ -111,9 +123,10 @@ export class PaymentMethodsController {
   @ApiOperation({ summary: 'Obtener un método de pago por id.' })
   @SwaggerApiResponse({ status: 404, description: 'No encontrado.' })
   findOne(
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PaymentMethodResponseDto> {
-    return this.paymentMethodsService.findOne(id);
+    return this.paymentMethodsService.findOne(businessId, id);
   }
 
   @Patch(':id')
@@ -122,10 +135,11 @@ export class PaymentMethodsController {
   @SwaggerApiResponse({ status: 404, description: 'No encontrado.' })
   @SwaggerApiResponse({ status: 409, description: 'El código ya existe.' })
   update(
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePaymentMethodDto,
   ): Promise<PaymentMethodResponseDto> {
-    return this.paymentMethodsService.update(id, dto);
+    return this.paymentMethodsService.update(businessId, id, dto);
   }
 
   @Delete(':id')
@@ -136,8 +150,11 @@ export class PaymentMethodsController {
       'Desactivar un método de pago (soft delete, preserva histórico de transacciones).',
   })
   @SwaggerApiResponse({ status: 404, description: 'No encontrado.' })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<null> {
-    await this.paymentMethodsService.remove(id);
+  async remove(
+    @CurrentBusiness() businessId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<null> {
+    await this.paymentMethodsService.remove(businessId, id);
     return null;
   }
 }

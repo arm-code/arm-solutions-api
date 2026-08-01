@@ -12,14 +12,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { BusinessEventResponseDto } from './dto/business-event-response.dto';
 import { CreateBusinessEventDto } from './dto/create-business-event.dto';
 import { QueryBusinessEventDto } from './dto/query-business-event.dto';
@@ -33,7 +34,12 @@ import { EventsService } from './events.service';
  */
 @ApiTags('Business Events')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
@@ -46,10 +52,10 @@ export class EventsController {
     description: 'Evento creado exitosamente.',
   })
   create(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
-    return this.eventsService.create(user.id, dto);
+    return this.eventsService.create(businessId, dto);
   }
 
   @Get()
@@ -59,10 +65,10 @@ export class EventsController {
       'Listar eventos del usuario autenticado con filtros (tab, status, search, paginación).',
   })
   findAll(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Query() query: QueryBusinessEventDto,
   ) {
-    return this.eventsService.findAll(user.id, query);
+    return this.eventsService.findAll(businessId, query);
   }
 
   @Get(':id')
@@ -76,10 +82,10 @@ export class EventsController {
     description: 'No encontrado o pertenece a otro usuario.',
   })
   findOne(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.eventsService.findOne(user.id, id);
+    return this.eventsService.findOne(businessId, id);
   }
 
   @Patch(':id')
@@ -90,11 +96,11 @@ export class EventsController {
     description: 'No encontrado o pertenece a otro usuario.',
   })
   update(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
-    return this.eventsService.update(user.id, id, dto);
+    return this.eventsService.update(businessId, id, dto);
   }
 
   @Patch(':id/status')
@@ -105,11 +111,11 @@ export class EventsController {
     description: 'No encontrado o pertenece a otro usuario.',
   })
   updateStatus(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEventStatusDto,
   ): Promise<BusinessEventResponseDto> {
-    return this.eventsService.updateStatus(user.id, id, dto.status);
+    return this.eventsService.updateStatus(businessId, id, dto.status);
   }
 
   @Delete(':id')
@@ -123,9 +129,9 @@ export class EventsController {
     description: 'No encontrado o pertenece a otro usuario.',
   })
   remove(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<BusinessEventResponseDto> {
-    return this.eventsService.remove(user.id, id);
+    return this.eventsService.remove(businessId, id);
   }
 }

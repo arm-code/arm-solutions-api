@@ -6,13 +6,14 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessConfigModule } from './modules/business-config/business-config.module';
+import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { EventsModule } from './modules/events/events.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { SalesNotesModule } from './modules/sales-notes/sales-notes.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
-import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -38,8 +39,9 @@ import { InventoryModule } from './modules/inventory/inventory.module';
       }),
     }),
 
-    // Autenticación (global, expone SupabaseAuthGuard a toda la app)
+    // Autenticación y gestión de Negocios (Globales)
     AuthModule,
+    BusinessesModule,
 
     // Módulos de negocio (feature: finanzas, ex-business.xlsx)
     PaymentMethodsModule,

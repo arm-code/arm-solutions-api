@@ -1,14 +1,15 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { DashboardService } from './dashboard.service';
 import { DashboardQueryDto } from './dto/dashboard-query.dto';
 
@@ -18,7 +19,12 @@ import { DashboardQueryDto } from './dto/dashboard-query.dto';
  */
 @ApiTags('Dashboard')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
@@ -49,9 +55,9 @@ export class DashboardController {
     },
   })
   getSummary(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Query() query: DashboardQueryDto,
   ) {
-    return this.dashboardService.getSummary(user.id, query);
+    return this.dashboardService.getSummary(businessId, query);
   }
 }

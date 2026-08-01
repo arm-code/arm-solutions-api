@@ -29,17 +29,18 @@ export class TransactionsService {
   ) {}
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateTransactionDto,
   ): Promise<TransactionResponseDto> {
     const [category, paymentMethod, businessEvent] = await Promise.all([
-      this.getActiveCategoryOrFail(dto.categoryId),
-      this.getActivePaymentMethodOrFail(dto.paymentMethodId),
-      this.getOwnedEventOrFail(ownerId, dto.businessEventId),
+      this.getActiveCategoryOrFail(businessId, dto.categoryId),
+      this.getActivePaymentMethodOrFail(businessId, dto.paymentMethodId),
+      this.getOwnedEventOrFail(businessId, dto.businessEventId),
     ]);
 
     const entity = this.transactionRepository.create({
-      ownerId,
+      businessId,
+      ownerId: businessId, // mantenido para retrocompatibilidad
       transactionDate: dto.transactionDate,
       type: dto.type,
       description: dto.description?.trim() ?? null,
@@ -51,12 +52,12 @@ export class TransactionsService {
 
     const saved = await this.transactionRepository.save(entity);
     return TransactionResponseDto.fromEntity(
-      await this.getOwnedEntityOrFail(ownerId, saved.id),
+      await this.getOwnedEntityOrFail(businessId, saved.id),
     );
   }
 
   async findAll(
-    ownerId: string,
+    businessId: string,
     query: QueryTransactionDto,
   ): Promise<PaginatedResultDto<TransactionResponseDto>> {
     const qb = this.transactionRepository
@@ -64,7 +65,7 @@ export class TransactionsService {
       .leftJoinAndSelect('transaction.category', 'category')
       .leftJoinAndSelect('transaction.paymentMethod', 'paymentMethod')
       .leftJoinAndSelect('transaction.businessEvent', 'businessEvent')
-      .where('transaction.ownerId = :ownerId', { ownerId });
+      .where('transaction.businessId = :businessId', { businessId });
 
     if (query.type) {
       qb.andWhere('transaction.type = :type', { type: query.type });
@@ -120,11 +121,20 @@ export class TransactionsService {
     );
   }
 
-  async getSummary(ownerId: string): Promise<{ totalInputs: number; totalOutputs: number; balance: number }> {
-    const qb = this.transactionRepository.createQueryBuilder('transaction')
-      .select("SUM(CASE WHEN transaction.type = 'INPUT' THEN transaction.amount ELSE 0 END)", 'totalInputs')
-      .addSelect("SUM(CASE WHEN transaction.type = 'OUTPUT' THEN transaction.amount ELSE 0 END)", 'totalOutputs')
-      .where('transaction.ownerId = :ownerId', { ownerId });
+  async getSummary(
+    businessId: string,
+  ): Promise<{ totalInputs: number; totalOutputs: number; balance: number }> {
+    const qb = this.transactionRepository
+      .createQueryBuilder('transaction')
+      .select(
+        "SUM(CASE WHEN transaction.type = 'INPUT' THEN transaction.amount ELSE 0 END)",
+        'totalInputs',
+      )
+      .addSelect(
+        "SUM(CASE WHEN transaction.type = 'OUTPUT' THEN transaction.amount ELSE 0 END)",
+        'totalOutputs',
+      )
+      .where('transaction.businessId = :businessId', { businessId });
 
     const result = await qb.getRawOne();
 
@@ -132,36 +142,33 @@ export class TransactionsService {
     const totalOutputs = Number(result?.totalOutputs || 0);
     const balance = totalInputs - totalOutputs;
 
-    return {
-      totalInputs,
-      totalOutputs,
-      balance,
-    };
+    return { totalInputs, totalOutputs, balance };
   }
 
-  async findOne(ownerId: string, id: string): Promise<TransactionResponseDto> {
-    const entity = await this.getOwnedEntityOrFail(ownerId, id);
+  async findOne(businessId: string, id: string): Promise<TransactionResponseDto> {
+    const entity = await this.getOwnedEntityOrFail(businessId, id);
     return TransactionResponseDto.fromEntity(entity);
   }
 
   async update(
-    ownerId: string,
+    businessId: string,
     id: string,
     dto: UpdateTransactionDto,
   ): Promise<TransactionResponseDto> {
-    const entity = await this.getOwnedEntityOrFail(ownerId, id);
+    const entity = await this.getOwnedEntityOrFail(businessId, id);
 
     if (dto.categoryId) {
-      entity.category = await this.getActiveCategoryOrFail(dto.categoryId);
+      entity.category = await this.getActiveCategoryOrFail(businessId, dto.categoryId);
     }
     if (dto.paymentMethodId) {
       entity.paymentMethod = await this.getActivePaymentMethodOrFail(
+        businessId,
         dto.paymentMethodId,
       );
     }
     if (dto.businessEventId !== undefined) {
       entity.businessEvent = await this.getOwnedEventOrFail(
-        ownerId,
+        businessId,
         dto.businessEventId,
       );
     }
@@ -174,23 +181,21 @@ export class TransactionsService {
 
     await this.transactionRepository.save(entity);
     return TransactionResponseDto.fromEntity(
-      await this.getOwnedEntityOrFail(ownerId, id),
+      await this.getOwnedEntityOrFail(businessId, id),
     );
   }
 
-  async remove(ownerId: string, id: string): Promise<void> {
-    const entity = await this.getOwnedEntityOrFail(ownerId, id);
-    // Delete físico: a diferencia de los catálogos, una transacción errónea
-    // se elimina de verdad (no tiene sentido conservar un movimiento inválido).
+  async remove(businessId: string, id: string): Promise<void> {
+    const entity = await this.getOwnedEntityOrFail(businessId, id);
     await this.transactionRepository.remove(entity);
   }
 
   private async getOwnedEntityOrFail(
-    ownerId: string,
+    businessId: string,
     id: string,
   ): Promise<Transaction> {
     const entity = await this.transactionRepository.findOne({
-      where: { id, ownerId },
+      where: { id, businessId },
       relations: { category: true, paymentMethod: true, businessEvent: true },
     });
     if (!entity) {
@@ -202,13 +207,16 @@ export class TransactionsService {
   }
 
   private async getActiveCategoryOrFail(
+    businessId: string,
     categoryId: string,
   ): Promise<TransactionCategory> {
     const category = await this.categoryRepository.findOne({
-      where: { id: categoryId },
+      where: { id: categoryId, businessId },
     });
     if (!category) {
-      throw new BadRequestException(`La categoría "${categoryId}" no existe.`);
+      throw new BadRequestException(
+        `La categoría "${categoryId}" no existe en este negocio.`,
+      );
     }
     if (!category.isActive) {
       throw new BadRequestException(
@@ -219,14 +227,15 @@ export class TransactionsService {
   }
 
   private async getActivePaymentMethodOrFail(
+    businessId: string,
     paymentMethodId: string,
   ): Promise<PaymentMethod> {
     const paymentMethod = await this.paymentMethodRepository.findOne({
-      where: { id: paymentMethodId },
+      where: { id: paymentMethodId, businessId },
     });
     if (!paymentMethod) {
       throw new BadRequestException(
-        `El método de pago "${paymentMethodId}" no existe.`,
+        `El método de pago "${paymentMethodId}" no existe en este negocio.`,
       );
     }
     if (!paymentMethod.isActive) {
@@ -238,19 +247,17 @@ export class TransactionsService {
   }
 
   private async getOwnedEventOrFail(
-    ownerId: string,
+    businessId: string,
     businessEventId?: string,
   ): Promise<BusinessEvent | null> {
     if (!businessEventId) return null;
 
-    // Se filtra también por ownerId para impedir asociar una transacción a
-    // un evento que pertenece a otro usuario.
     const event = await this.eventRepository.findOne({
-      where: { id: businessEventId, ownerId },
+      where: { id: businessEventId, businessId },
     });
     if (!event) {
       throw new BadRequestException(
-        `El evento "${businessEventId}" no existe o no te pertenece.`,
+        `El evento "${businessEventId}" no existe en este negocio.`,
       );
     }
     return event;

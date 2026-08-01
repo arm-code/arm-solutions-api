@@ -14,13 +14,16 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
+import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
@@ -34,7 +37,12 @@ import { TransactionsService } from './transactions.service';
  */
 @ApiTags('Transactions')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@ApiHeader({
+  name: 'X-Business-ID',
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
+  required: true,
+})
+@UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
@@ -83,10 +91,10 @@ export class TransactionsController {
     description: 'Categoría, método de pago o evento inválido/inexistente.',
   })
   create(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Body() dto: CreateTransactionDto,
   ): Promise<TransactionResponseDto> {
-    return this.transactionsService.create(user.id, dto);
+    return this.transactionsService.create(businessId, dto);
   }
 
   @Get()
@@ -142,10 +150,10 @@ export class TransactionsController {
     },
   })
   findAll(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Query() query: QueryTransactionDto,
   ) {
-    return this.transactionsService.findAll(user.id, query);
+    return this.transactionsService.findAll(businessId, query);
   }
 
   @Get('summary')
@@ -168,8 +176,8 @@ export class TransactionsController {
       },
     },
   })
-  getSummary(@CurrentUser() user: AuthenticatedUser) {
-    return this.transactionsService.getSummary(user.id);
+  getSummary(@CurrentBusiness() businessId: string) {
+    return this.transactionsService.getSummary(businessId);
   }
 
   @Get(':id')
@@ -180,10 +188,10 @@ export class TransactionsController {
     description: 'No encontrada o pertenece a otro usuario.',
   })
   findOne(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<TransactionResponseDto> {
-    return this.transactionsService.findOne(user.id, id);
+    return this.transactionsService.findOne(businessId, id);
   }
 
   @Patch(':id')
@@ -198,11 +206,11 @@ export class TransactionsController {
     description: 'Categoría, método de pago o evento inválido/inexistente.',
   })
   update(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTransactionDto,
   ): Promise<TransactionResponseDto> {
-    return this.transactionsService.update(user.id, id, dto);
+    return this.transactionsService.update(businessId, id, dto);
   }
 
   @Delete(':id')
@@ -214,10 +222,10 @@ export class TransactionsController {
     description: 'No encontrada o pertenece a otro usuario.',
   })
   async remove(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<null> {
-    await this.transactionsService.remove(user.id, id);
+    await this.transactionsService.remove(businessId, id);
     return null;
   }
 }

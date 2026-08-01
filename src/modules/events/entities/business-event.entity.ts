@@ -8,11 +8,19 @@ import { EventStatus } from '../enums/event-status.enum';
  * al que pueden asociarse una o más transacciones.
  */
 @Entity({ name: 'business_events', schema: 'armsolutions' })
+@Index(['businessId', 'name'])
+@Index(['businessId', 'folioNumber'])
 @Index(['ownerId', 'name'])
 @Index(['ownerId', 'folioNumber'])
 export class BusinessEvent extends BaseEntity {
+  /** @deprecated Usar businessId para filtros. Mantenido para backfill. */
   @Column({ name: 'owner_id', type: 'uuid' })
-  ownerId: string; // referencia a auth.users(id) de Supabase
+  ownerId: string;
+
+  /** Negocio (tenant) al que pertenece este evento. */
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid' })
+  businessId: string;
 
   @Column({ name: 'folio_number', type: 'integer', insert: false })
   folioNumber: number;

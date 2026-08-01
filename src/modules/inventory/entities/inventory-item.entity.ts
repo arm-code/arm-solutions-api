@@ -14,14 +14,21 @@ import { InventoryItemSerial } from './inventory-item-serial.entity';
 import { InventoryLocation } from './inventory-location.entity';
 
 @Entity({ name: 'items_inv', schema: 'armsolutions' })
+@Index(['businessId'])
+@Index(['businessId', 'sku'], { unique: true })
 @Index(['ownerId'])
 @Index(['ownerId', 'sku'], { unique: true })
 @Index(['categoryId'])
 @Index(['status'])
 @Index(['type'])
 export class InventoryItem extends BaseEntity {
+  /** @deprecated Usar businessId para filtros. */
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
+
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid' })
+  businessId: string;
 
   @Column({ type: 'varchar', length: 200 })
   name: string;

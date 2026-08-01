@@ -16,15 +16,16 @@ export class BusinessConfigService {
     private readonly cardRepository: Repository<PaymentCard>,
   ) {}
 
-  async getConfig(): Promise<BusinessConfigResponseDto> {
-    const config = await this.getOrCreateDefaultConfig();
+  async getConfig(businessId: string): Promise<BusinessConfigResponseDto> {
+    const config = await this.getOrCreateDefaultConfig(businessId);
     return BusinessConfigResponseDto.fromEntity(config);
   }
 
   async updateConfig(
+    businessId: string,
     dto: UpdateBusinessConfigDto,
   ): Promise<BusinessConfigResponseDto> {
-    const config = await this.getOrCreateDefaultConfig();
+    const config = await this.getOrCreateDefaultConfig(businessId);
 
     if (dto.name !== undefined) config.name = dto.name.trim();
     if (dto.logoUrl !== undefined) config.logoUrl = dto.logoUrl?.trim() ?? null;
@@ -38,14 +39,15 @@ export class BusinessConfigService {
       config.termsAndConditions = dto.termsAndConditions?.trim() ?? null;
 
     await this.configRepository.save(config);
-    const updated = await this.getOrCreateDefaultConfig();
+    const updated = await this.getOrCreateDefaultConfig(businessId);
     return BusinessConfigResponseDto.fromEntity(updated);
   }
 
   async addPaymentCard(
+    businessId: string,
     dto: CreatePaymentCardDto,
   ): Promise<BusinessConfigResponseDto> {
-    const config = await this.getOrCreateDefaultConfig();
+    const config = await this.getOrCreateDefaultConfig(businessId);
 
     const card = this.cardRepository.create({
       configId: config.id,
@@ -56,12 +58,18 @@ export class BusinessConfigService {
     });
 
     await this.cardRepository.save(card);
-    const updated = await this.getOrCreateDefaultConfig();
+    const updated = await this.getOrCreateDefaultConfig(businessId);
     return BusinessConfigResponseDto.fromEntity(updated);
   }
 
-  async removePaymentCard(cardId: string): Promise<BusinessConfigResponseDto> {
-    const card = await this.cardRepository.findOne({ where: { id: cardId } });
+  async removePaymentCard(
+    businessId: string,
+    cardId: string,
+  ): Promise<BusinessConfigResponseDto> {
+    const config = await this.getOrCreateDefaultConfig(businessId);
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId, configId: config.id },
+    });
     if (!card) {
       throw new NotFoundException(
         `No se encontró la cuenta bancaria con ID "${cardId}".`,
@@ -69,46 +77,37 @@ export class BusinessConfigService {
     }
 
     await this.cardRepository.remove(card);
-    const updated = await this.getOrCreateDefaultConfig();
+    const updated = await this.getOrCreateDefaultConfig(businessId);
     return BusinessConfigResponseDto.fromEntity(updated);
   }
 
-  private async getOrCreateDefaultConfig(): Promise<BusinessConfig> {
+  private async getOrCreateDefaultConfig(businessId: string): Promise<BusinessConfig> {
     let config = await this.configRepository.findOne({
-      where: {},
+      where: { businessId },
       relations: ['paymentCards'],
       order: { createdAt: 'ASC' },
     });
 
     if (!config) {
       const newConfig = this.configRepository.create({
-        name: 'Eventos Mendoza',
-        phone: '656 123 4567',
-        whatsapp: '526561234567',
-        email: 'contacto@eventosmendoza.com',
-        address: 'Av. Principal #123, Cd. Juárez',
-        services: ['Sillas y mesas', 'Carpas', 'Mantelería', 'Montaje'],
-        coverageAreas: ['Ciudad Juárez', 'Chihuahua'],
-        termsAndConditions:
-          'El cliente se compromete a entregar el mobiliario en buen estado.',
+        businessId,
+        name: 'Configuración de Negocio',
+        phone: '',
+        whatsapp: '',
+        email: '',
+        address: '',
+        services: [],
+        coverageAreas: [],
+        termsAndConditions: '',
       });
 
       config = await this.configRepository.save(newConfig);
 
-      // Tarjeta inicial por defecto
-      const defaultCard = this.cardRepository.create({
-        configId: config.id,
-        bank: 'BBVA',
-        cardNumber: '4152 3138 1234 5678',
-        clabe: '012180012345678901',
-        beneficiary: 'Eventos Mendoza',
-      });
-      await this.cardRepository.save(defaultCard);
-
-      config = (await this.configRepository.findOne({
-        where: { id: config.id },
+      const found = await this.configRepository.findOne({
+        where: { id: config.id, businessId },
         relations: ['paymentCards'],
-      }))!;
+      });
+      if (found) config = found;
     }
 
     return config;

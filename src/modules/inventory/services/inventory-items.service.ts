@@ -28,14 +28,14 @@ export class InventoryItemsService {
   ) {}
 
   async findAll(
-    ownerId: string,
+    businessId: string,
     query: QueryInventoryItemsDto,
   ): Promise<PaginatedResultDto<InventoryItemResponseDto>> {
     const qb = this.itemRepo
       .createQueryBuilder('item')
       .leftJoinAndSelect('item.category', 'category')
       .leftJoinAndSelect('item.location', 'location')
-      .where('item.ownerId = :ownerId', { ownerId });
+      .where('item.businessId = :businessId', { businessId });
 
     // Filtro isActive (por defecto solo activos)
     const isActive = query.isActive !== undefined ? query.isActive : true;
@@ -78,11 +78,11 @@ export class InventoryItemsService {
   }
 
   async findOne(
-    ownerId: string,
+    businessId: string,
     id: string,
   ): Promise<InventoryItemResponseDto> {
     const entity = await this.itemRepo.findOne({
-      where: { id, ownerId },
+      where: { id, businessId },
       relations: ['category', 'location'],
     });
     if (!entity) {
@@ -95,7 +95,7 @@ export class InventoryItemsService {
     const includeSerials = entity.type === InventoryItemType.SERIALIZED;
     if (includeSerials) {
       const withSerials = await this.itemRepo.findOne({
-        where: { id, ownerId },
+        where: { id, businessId },
         relations: ['category', 'location', 'serials'],
       });
       return InventoryItemResponseDto.fromEntity(withSerials!, true);
@@ -105,14 +105,14 @@ export class InventoryItemsService {
   }
 
   async create(
-    ownerId: string,
+    businessId: string,
     dto: CreateInventoryItemDto,
   ): Promise<InventoryItemResponseDto> {
-    // Verificar categoría existe y pertenece al owner
-    await this.verifyCategoryOrFail(ownerId, dto.categoryId);
+    // Verificar categoría existe y pertenece al negocio
+    await this.verifyCategoryOrFail(businessId, dto.categoryId);
 
-    // Verificar SKU único por owner
-    await this.verifySkuUnique(ownerId, dto.sku);
+    // Verificar SKU único por negocio
+    await this.verifySkuUnique(businessId, dto.sku);
 
     const initialStock = dto.initialStock ?? 0;
 
@@ -122,7 +122,8 @@ export class InventoryItemsService {
 
     try {
       const entity = queryRunner.manager.create(InventoryItem, {
-        ownerId,
+        businessId,
+        ownerId: businessId,
         name: dto.name.trim(),
         sku: dto.sku.trim().toUpperCase(),
         type: dto.type,
@@ -143,7 +144,8 @@ export class InventoryItemsService {
 
       if (initialStock > 0) {
         const movement = queryRunner.manager.create(InventoryMovement, {
-          ownerId,
+          businessId,
+          ownerId: businessId,
           itemId: saved.id,
           type: InventoryMovementType.IN,
           quantity: initialStock,
@@ -166,7 +168,7 @@ export class InventoryItemsService {
       }
 
       await queryRunner.commitTransaction();
-      return this.findOne(ownerId, saved.id);
+      return this.findOne(businessId, saved.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -176,21 +178,21 @@ export class InventoryItemsService {
   }
 
   async update(
-    ownerId: string,
+    businessId: string,
     id: string,
     dto: UpdateInventoryItemDto,
   ): Promise<InventoryItemResponseDto> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+    const entity = await this.getEntityOrFail(businessId, id);
 
     if (dto.name !== undefined) entity.name = dto.name.trim();
     if (dto.sku !== undefined && dto.sku !== entity.sku) {
-      await this.verifySkuUnique(ownerId, dto.sku, id);
+      await this.verifySkuUnique(businessId, dto.sku, id);
       entity.sku = dto.sku.trim().toUpperCase();
     }
     if (dto.type !== undefined) entity.type = dto.type;
     if (dto.status !== undefined) entity.status = dto.status;
     if (dto.categoryId !== undefined) {
-      await this.verifyCategoryOrFail(ownerId, dto.categoryId);
+      await this.verifyCategoryOrFail(businessId, dto.categoryId);
       entity.categoryId = dto.categoryId;
     }
     if (dto.locationId !== undefined) entity.locationId = dto.locationId ?? null;
@@ -201,12 +203,12 @@ export class InventoryItemsService {
     if (dto.attributes !== undefined) entity.attributes = dto.attributes;
 
     await this.itemRepo.save(entity);
-    return this.findOne(ownerId, id);
+    return this.findOne(businessId, id);
   }
 
   /** Soft-delete: preserva historiales de notas de venta. */
-  async remove(ownerId: string, id: string): Promise<InventoryItemResponseDto> {
-    const entity = await this.getEntityOrFail(ownerId, id);
+  async remove(businessId: string, id: string): Promise<InventoryItemResponseDto> {
+    const entity = await this.getEntityOrFail(businessId, id);
     entity.isActive = false;
     await this.itemRepo.save(entity);
     return InventoryItemResponseDto.fromEntity(entity, false);
@@ -214,9 +216,9 @@ export class InventoryItemsService {
 
   // ── Helpers privados ─────────────────────────────────────────────────────
 
-  async getEntityOrFail(ownerId: string, id: string): Promise<InventoryItem> {
+  async getEntityOrFail(businessId: string, id: string): Promise<InventoryItem> {
     const entity = await this.itemRepo.findOne({
-      where: { id, ownerId },
+      where: { id, businessId },
     });
     if (!entity) {
       throw new NotFoundException(
@@ -227,12 +229,12 @@ export class InventoryItemsService {
   }
 
   private async verifyCategoryOrFail(
-    ownerId: string,
+    businessId: string,
     categoryId: string,
   ): Promise<void> {
     const exists = await this.categoryRepo.existsBy({
       id: categoryId,
-      ownerId,
+      businessId,
       isActive: true,
     });
     if (!exists) {
@@ -243,13 +245,13 @@ export class InventoryItemsService {
   }
 
   private async verifySkuUnique(
-    ownerId: string,
+    businessId: string,
     sku: string,
     excludeId?: string,
   ): Promise<void> {
     const qb = this.itemRepo
       .createQueryBuilder('item')
-      .where('item.ownerId = :ownerId', { ownerId })
+      .where('item.businessId = :businessId', { businessId })
       .andWhere('UPPER(item.sku) = UPPER(:sku)', { sku });
 
     if (excludeId) {

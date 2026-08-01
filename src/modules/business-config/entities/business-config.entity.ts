@@ -4,6 +4,13 @@ import { PaymentCard } from './payment-card.entity';
 
 @Entity({ name: 'business_configs', schema: 'armsolutions' })
 export class BusinessConfig extends BaseEntity {
+  /**
+   * Negocio al que pertenece esta configuración.
+   * Una fila por negocio (relación 1:1).
+   */
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId: string | null;
+
   @Column({ type: 'varchar', length: 150, default: 'Eventos Mendoza' })
   name: string;
 

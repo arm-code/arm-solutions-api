@@ -12,10 +12,15 @@ import { Transaction } from '../../transactions/entities/transaction.entity';
  * métodos obsoletos sin borrar histórico, y evitar errores de tipeo.
  */
 @Entity({ name: 'payment_methods', schema: 'armsolutions' })
+@Index(['businessId', 'code'], { unique: true })
 export class PaymentMethod extends BaseEntity {
-  @Index({ unique: true })
+  /** Negocio al que pertenece este método de pago. */
+  @Index()
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId: string | null;
+
   @Column({ type: 'varchar', length: 30 })
-  code: string; // CASH, TRANSFER, CARD...
+  code: string;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;
