@@ -12,6 +12,7 @@ import { EventsModule } from './modules/events/events.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { SalesNotesModule } from './modules/sales-notes/sales-notes.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -48,6 +49,9 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     DashboardModule,
     SalesNotesModule,
     BusinessConfigModule,
+
+    // Módulo de Inventario (multi-negocio)
+    InventoryModule,
   ],
   providers: [
     // Envuelve TODAS las respuestas exitosas en { success, message, data }
