@@ -38,6 +38,21 @@ export class BusinessConfig extends BaseEntity {
   @Column({ name: 'terms_and_conditions', type: 'text', nullable: true })
   termsAndConditions: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  history: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  mission: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  vision: string | null;
+
+  @Column({ name: 'opening_hours', type: 'varchar', length: 150, nullable: true })
+  openingHours: string | null;
+
   @OneToMany(() => PaymentCard, (card) => card.config, {
     cascade: true,
     eager: true,

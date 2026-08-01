@@ -13,6 +13,9 @@ import {
   SupabaseJwtPayload,
 } from '../interfaces/authenticated-user.interface';
 
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+
 /** Extiende `Request` de Express con el usuario autenticado. */
 export interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
@@ -37,9 +40,20 @@ export interface AuthenticatedRequest extends Request {
 export class SupabaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(SupabaseAuthGuard.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractTokenFromHeader(request);
 

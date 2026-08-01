@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BusinessConfigService } from '../business-config/business-config.service';
 import { BusinessResponseDto } from './dto/business-response.dto';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { PublicBusinessResponseDto } from './dto/public-business-response.dto';
 import { Business } from './entities/business.entity';
 import { BusinessUser } from './entities/business-user.entity';
 import { BusinessRole } from './enums/business-role.enum';
@@ -22,6 +24,7 @@ export class BusinessesService {
     private readonly businessRepo: Repository<Business>,
     @InjectRepository(BusinessUser)
     private readonly memberRepo: Repository<BusinessUser>,
+    private readonly businessConfigService: BusinessConfigService,
   ) {}
 
   /**
@@ -106,6 +109,25 @@ export class BusinessesService {
     this.logger.log(`Negocio creado: ${saved.name} (${saved.id}) por usuario ${userId}`);
 
     return BusinessResponseDto.fromEntities(saved, savedMembership);
+  }
+
+  /**
+   * Obtiene la información pública de un negocio por su slug
+   * (incluyendo su configuración comercial e información institucional/cuentas).
+   */
+  async getPublicBusinessBySlug(
+    slug: string,
+  ): Promise<PublicBusinessResponseDto> {
+    const business = await this.businessRepo.findOne({
+      where: { slug, isActive: true },
+    });
+
+    if (!business) {
+      throw new NotFoundException(`Negocio con slug "${slug}" no encontrado.`);
+    }
+
+    const configDto = await this.businessConfigService.getConfig(business.id);
+    return PublicBusinessResponseDto.create(business, configDto);
   }
 
   /**

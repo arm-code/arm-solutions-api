@@ -63,6 +63,21 @@ export class BusinessConfigResponseDto {
   })
   termsAndConditions: string | null;
 
+  @ApiPropertyOptional({ example: 'Renta de mobiliario de alta calidad para tus mejores eventos.', nullable: true })
+  description: string | null;
+
+  @ApiPropertyOptional({ example: 'Fundada en 2018 con la misión de transformar tus eventos.', nullable: true })
+  history: string | null;
+
+  @ApiPropertyOptional({ example: 'Brindar el mejor servicio de logística y mobiliario.', nullable: true })
+  mission: string | null;
+
+  @ApiPropertyOptional({ example: 'Ser la empresa líder en banquetes y eventos en la región.', nullable: true })
+  vision: string | null;
+
+  @ApiPropertyOptional({ example: 'Lunes a Domingo 08:00 - 21:00', nullable: true })
+  openingHours: string | null;
+
   @ApiProperty({ type: [PaymentCardResponseDto] })
   paymentCards: PaymentCardResponseDto[];
 
@@ -84,6 +99,11 @@ export class BusinessConfigResponseDto {
     dto.services = entity.services || [];
     dto.coverageAreas = entity.coverageAreas || [];
     dto.termsAndConditions = entity.termsAndConditions;
+    dto.description = entity.description;
+    dto.history = entity.history;
+    dto.mission = entity.mission;
+    dto.vision = entity.vision;
+    dto.openingHours = entity.openingHours;
     dto.paymentCards = (entity.paymentCards || []).map((card) =>
       PaymentCardResponseDto.fromEntity(card),
     );

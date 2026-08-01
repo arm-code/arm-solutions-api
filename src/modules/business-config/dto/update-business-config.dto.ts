@@ -88,4 +88,45 @@ export class UpdateBusinessConfigDto {
   @IsOptional()
   @IsString()
   termsAndConditions?: string;
+
+  @ApiPropertyOptional({
+    description: 'Eslogan o descripción corta para Hero y SEO.',
+    example: 'Renta de mobiliario de alta calidad para tus mejores eventos.',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Reseña histórica de la empresa.',
+    example: 'Fundada en 2018 con la misión de transformar tus eventos.',
+  })
+  @IsOptional()
+  @IsString()
+  history?: string;
+
+  @ApiPropertyOptional({
+    description: 'Misión de la empresa.',
+    example: 'Brindar el mejor servicio de logística y mobiliario.',
+  })
+  @IsOptional()
+  @IsString()
+  mission?: string;
+
+  @ApiPropertyOptional({
+    description: 'Visión de la empresa.',
+    example: 'Ser la empresa líder en banquetes y eventos en la región.',
+  })
+  @IsOptional()
+  @IsString()
+  vision?: string;
+
+  @ApiPropertyOptional({
+    description: 'Horario comercial de atención.',
+    example: 'Lunes a Domingo 08:00 - 21:00',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  openingHours?: string;
 }

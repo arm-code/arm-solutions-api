@@ -18,8 +18,11 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
+import { BusinessesService } from '../businesses/businesses.service';
+import { PublicBusinessResponseDto } from '../businesses/dto/public-business-response.dto';
 import { BusinessConfigService } from './business-config.service';
 import { BusinessConfigResponseDto } from './dto/business-config-response.dto';
 import { CreatePaymentCardDto } from './dto/create-payment-card.dto';
@@ -33,15 +36,34 @@ import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
 @ApiBearerAuth()
 @ApiHeader({
   name: 'X-Business-ID',
-  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
-  required: true,
+  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo (excepto endpoints públicos).',
+  required: false,
 })
 @UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('config')
 export class BusinessConfigController {
   constructor(
     private readonly businessConfigService: BusinessConfigService,
+    private readonly businessesService: BusinessesService,
   ) {}
+
+  @Public()
+  @Get('public/:slug')
+  @ResponseMessage('Información pública del negocio obtenida correctamente.')
+  @ApiOperation({
+    summary:
+      'Obtener la configuración e información pública del negocio por su slug.',
+  })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Configuración pública del negocio.',
+    type: PublicBusinessResponseDto,
+  })
+  getPublicConfigBySlug(
+    @Param('slug') slug: string,
+  ): Promise<PublicBusinessResponseDto> {
+    return this.businessesService.getPublicBusinessBySlug(slug);
+  }
 
   @Get()
   @ResponseMessage('Configuración obtenida correctamente.')

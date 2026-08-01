@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -15,11 +16,13 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { BusinessesService } from './businesses.service';
 import { BusinessResponseDto } from './dto/business-response.dto';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { PublicBusinessResponseDto } from './dto/public-business-response.dto';
 
 /**
  * Gestión de negocios (tenants).
@@ -34,6 +37,28 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 @Controller('businesses')
 export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}
+
+  @Public()
+  @Get('public/:slug')
+  @ResponseMessage('Información pública del negocio obtenida exitosamente.')
+  @ApiOperation({
+    summary:
+      'Obtener la información comercial pública y configuración de un negocio por su slug.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Información pública del negocio y su configuración.',
+    type: PublicBusinessResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Negocio no encontrado.',
+  })
+  getPublicBusinessBySlug(
+    @Param('slug') slug: string,
+  ): Promise<PublicBusinessResponseDto> {
+    return this.businessesService.getPublicBusinessBySlug(slug);
+  }
 
   @Get()
   @ResponseMessage('Negocios obtenidos exitosamente.')

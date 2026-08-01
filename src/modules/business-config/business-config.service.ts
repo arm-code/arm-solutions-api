@@ -37,6 +37,11 @@ export class BusinessConfigService {
     if (dto.coverageAreas !== undefined) config.coverageAreas = dto.coverageAreas;
     if (dto.termsAndConditions !== undefined)
       config.termsAndConditions = dto.termsAndConditions?.trim() ?? null;
+    if (dto.description !== undefined) config.description = dto.description?.trim() ?? null;
+    if (dto.history !== undefined) config.history = dto.history?.trim() ?? null;
+    if (dto.mission !== undefined) config.mission = dto.mission?.trim() ?? null;
+    if (dto.vision !== undefined) config.vision = dto.vision?.trim() ?? null;
+    if (dto.openingHours !== undefined) config.openingHours = dto.openingHours?.trim() ?? null;
 
     await this.configRepository.save(config);
     const updated = await this.getOrCreateDefaultConfig(businessId);

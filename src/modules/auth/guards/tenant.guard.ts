@@ -5,8 +5,10 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { BusinessesService } from '../../businesses/businesses.service';
 import { BusinessRole } from '../../businesses/enums/business-role.enum';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { AuthenticatedRequest } from './supabase-auth.guard';
 
 /**
@@ -41,9 +43,20 @@ export class TenantGuard implements CanActivate {
   private readonly UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  constructor(private readonly businessesService: BusinessesService) {}
+  constructor(
+    private readonly businessesService: BusinessesService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<
       AuthenticatedRequest & { businessId?: string; businessRole?: BusinessRole }
     >();
