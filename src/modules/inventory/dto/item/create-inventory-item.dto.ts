@@ -10,6 +10,8 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { InventoryItemStatus } from '../../enums/inventory-item-status.enum';
 import { InventoryItemType } from '../../enums/inventory-item-type.enum';
@@ -66,4 +68,11 @@ export class CreateInventoryItemDto {
   @IsOptional()
   @IsObject()
   attributes?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ example: 10, description: 'Stock inicial al crear el ítem.' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  initialStock?: number;
 }

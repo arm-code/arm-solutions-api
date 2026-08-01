@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common/dto/paginated-result.dto';
 import { InventoryItemResponseDto } from '../dto/item/inventory-item-response.dto';
 import { CreateInventoryItemDto } from '../dto/item/create-inventory-item.dto';
@@ -12,7 +12,9 @@ import { QueryInventoryItemsDto } from '../dto/item/query-inventory-items.dto';
 import { UpdateInventoryItemDto } from '../dto/item/update-inventory-item.dto';
 import { InventoryCategory } from '../entities/inventory-category.entity';
 import { InventoryItem } from '../entities/inventory-item.entity';
+import { InventoryMovement } from '../entities/inventory-movement.entity';
 import { InventoryItemType } from '../enums/inventory-item-type.enum';
+import { InventoryMovementType } from '../enums/inventory-movement-type.enum';
 
 @Injectable()
 export class InventoryItemsService {
@@ -21,6 +23,8 @@ export class InventoryItemsService {
     private readonly itemRepo: Repository<InventoryItem>,
     @InjectRepository(InventoryCategory)
     private readonly categoryRepo: Repository<InventoryCategory>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -110,26 +114,65 @@ export class InventoryItemsService {
     // Verificar SKU único por owner
     await this.verifySkuUnique(ownerId, dto.sku);
 
-    const entity = this.itemRepo.create({
-      ownerId,
-      name: dto.name.trim(),
-      sku: dto.sku.trim().toUpperCase(),
-      type: dto.type,
-      status: dto.status,
-      categoryId: dto.categoryId,
-      locationId: dto.locationId ?? null,
-      rentPrice: dto.rentPrice != null ? String(dto.rentPrice) : null,
-      salePrice: dto.salePrice != null ? String(dto.salePrice) : null,
-      attributes: dto.attributes ?? {},
-      stockTotal: 0,
-      stockAvailable: 0,
-      stockReserved: 0,
-      stockRented: 0,
-      isActive: true,
-    });
+    const initialStock = dto.initialStock ?? 0;
 
-    const saved = await this.itemRepo.save(entity);
-    return this.findOne(ownerId, saved.id);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const entity = queryRunner.manager.create(InventoryItem, {
+        ownerId,
+        name: dto.name.trim(),
+        sku: dto.sku.trim().toUpperCase(),
+        type: dto.type,
+        status: dto.status,
+        categoryId: dto.categoryId,
+        locationId: dto.locationId ?? null,
+        rentPrice: dto.rentPrice != null ? String(dto.rentPrice) : null,
+        salePrice: dto.salePrice != null ? String(dto.salePrice) : null,
+        attributes: dto.attributes ?? {},
+        stockTotal: initialStock,
+        stockAvailable: initialStock,
+        stockReserved: 0,
+        stockRented: 0,
+        isActive: true,
+      });
+
+      const saved = await queryRunner.manager.save(InventoryItem, entity);
+
+      if (initialStock > 0) {
+        const movement = queryRunner.manager.create(InventoryMovement, {
+          ownerId,
+          itemId: saved.id,
+          type: InventoryMovementType.IN,
+          quantity: initialStock,
+          destinationLocationId: dto.locationId ?? null,
+          reason: 'Stock inicial por creación de ítem',
+          snapshotStockBefore: {
+            total: 0,
+            available: 0,
+            reserved: 0,
+            rented: 0,
+          },
+          snapshotStockAfter: {
+            total: initialStock,
+            available: initialStock,
+            reserved: 0,
+            rented: 0,
+          },
+        });
+        await queryRunner.manager.save(InventoryMovement, movement);
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findOne(ownerId, saved.id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async update(
