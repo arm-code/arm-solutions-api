@@ -19,8 +19,10 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateSalesNoteDto } from './dto/create-sales-note.dto';
 import { QuerySalesNotesDto } from './dto/query-sales-notes.dto';
 import { SalesNoteResponseDto } from './dto/sales-note-response.dto';
@@ -52,10 +54,11 @@ export class SalesNotesController {
     description: 'Creada exitosamente.',
   })
   create(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentBusiness() businessId: string,
     @Body() dto: CreateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
-    return this.salesNotesService.create(businessId, dto);
+    return this.salesNotesService.create(businessId, user.id, dto);
   }
 
   @Get()

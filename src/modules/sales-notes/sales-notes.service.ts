@@ -24,6 +24,7 @@ export class SalesNotesService {
 
   async create(
     businessId: string,
+    userId: string,
     dto: CreateSalesNoteDto,
   ): Promise<SalesNoteResponseDto> {
     if (dto.eventId) {
@@ -57,7 +58,7 @@ export class SalesNotesService {
 
     const noteEntity = this.noteRepository.create({
       businessId,
-      ownerId: businessId,
+      ownerId: userId,
       status: dto.status ?? SalesNoteStatus.NOTE,
       customerName: dto.customerName.trim(),
       customerPhone: dto.customerPhone?.trim() ?? null,

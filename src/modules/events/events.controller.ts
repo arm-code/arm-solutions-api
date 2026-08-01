@@ -19,8 +19,10 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { BusinessEventResponseDto } from './dto/business-event-response.dto';
 import { CreateBusinessEventDto } from './dto/create-business-event.dto';
 import { QueryBusinessEventDto } from './dto/query-business-event.dto';
@@ -52,10 +54,11 @@ export class EventsController {
     description: 'Evento creado exitosamente.',
   })
   create(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentBusiness() businessId: string,
     @Body() dto: CreateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
-    return this.eventsService.create(businessId, dto);
+    return this.eventsService.create(businessId, user.id, dto);
   }
 
   @Get()

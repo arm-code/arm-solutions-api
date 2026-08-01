@@ -25,11 +25,12 @@ export class EventsService {
 
   async create(
     businessId: string,
+    userId: string,
     dto: CreateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
     const entity = this.eventRepository.create({
       businessId,
-      ownerId: businessId, // mantenido para retrocompatibilidad
+      ownerId: userId,
       name: dto.name.trim(),
       eventDate: dto.eventDate,
       clientName: dto.clientName.trim(),
