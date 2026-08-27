@@ -14,6 +14,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { SalesNotesModule } from './modules/sales-notes/sales-notes.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { DownloaderModule } from './modules/downloader/downloader.module';
 
 @Module({
   imports: [
@@ -54,6 +55,9 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 
     // Módulo de Inventario (multi-negocio)
     InventoryModule,
+
+    // Módulo de Herramientas Utilitarias
+    DownloaderModule,
   ],
   providers: [
     // Envuelve TODAS las respuestas exitosas en { success, message, data }
