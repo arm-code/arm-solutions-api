@@ -91,6 +91,8 @@ export class DownloaderService {
         '--flat-playlist',
         '--no-playlist',  // se sobreescribe si la URL es playlist
         '--skip-download',
+        // Node.js como runtime JS para extracción de YouTube (requerido en yt-dlp >= 2025)
+        '--js-runtimes', 'node',
         dto.url,
       ];
 
@@ -132,14 +134,21 @@ export class DownloaderService {
     const outputTemplate = path.join(outDir, '%(title)s.%(ext)s');
 
     const args: string[] = [
-      '--ffmpeg-location', this.ffmpegBin,
       '--no-part',            // Sin archivos .part al descargar
       '--no-mtime',           // No modificar fechas de archivo
       '--extract-audio',
       '--audio-format', 'mp3',
       '--audio-quality', quality,
+      // Node.js como runtime JS para extracción de YouTube (requerido en yt-dlp >= 2025)
+      '--js-runtimes', 'node',
       '-o', outputTemplate,
     ];
+
+    // Solo pasar --ffmpeg-location cuando sea una ruta absoluta al binario.
+    // Si FFMPEG_BIN es simplemente 'ffmpeg', yt-dlp lo busca en el PATH por su cuenta.
+    if (path.isAbsolute(this.ffmpegBin)) {
+      args.unshift('--ffmpeg-location', this.ffmpegBin);
+    }
 
     if (dto.embedMetadata !== false) {
       args.push('--embed-metadata');
