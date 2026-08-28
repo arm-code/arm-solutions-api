@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
@@ -13,6 +13,7 @@ import { QueryBusinessEventDto } from './dto/query-business-event.dto';
 import { UpdateBusinessEventDto } from './dto/update-business-event.dto';
 import { BusinessEvent } from './entities/business-event.entity';
 import { EventStatus } from './enums/event-status.enum';
+import { SalesNote } from '../sales-notes/entities/sales-note.entity';
 
 @Injectable()
 export class EventsService {
@@ -21,6 +22,8 @@ export class EventsService {
     private readonly eventRepository: Repository<BusinessEvent>,
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
+    @InjectRepository(SalesNote)
+    private readonly salesNoteRepository: Repository<SalesNote>,
   ) {}
 
   async create(
@@ -28,6 +31,13 @@ export class EventsService {
     userId: string,
     dto: CreateBusinessEventDto,
   ): Promise<BusinessEventResponseDto> {
+    if (dto.noteId) {
+      const noteExists = await this.salesNoteRepository.existsBy({ id: dto.noteId, businessId });
+      if (!noteExists) {
+        throw new BadRequestException(`No se encontró la nota/cotización con id "${dto.noteId}".`);
+      }
+    }
+
     const entity = this.eventRepository.create({
       businessId,
       ownerId: userId,
@@ -45,6 +55,11 @@ export class EventsService {
     });
 
     const saved = await this.eventRepository.save(entity);
+    
+    if (dto.noteId) {
+      await this.salesNoteRepository.update({ id: dto.noteId }, { eventId: saved.id });
+    }
+    
     const reloaded = await this.getEntityOrFail(businessId, saved.id);
     return BusinessEventResponseDto.fromEntity(reloaded);
   }
@@ -161,7 +176,29 @@ export class EventsService {
     if (dto.status !== undefined) entity.status = dto.status;
     if (dto.guaranteeDocument !== undefined)
       entity.guaranteeDocument = dto.guaranteeDocument?.trim() ?? null;
-    if (dto.noteId !== undefined) entity.noteId = dto.noteId ?? null;
+      
+    if (dto.noteId !== undefined && dto.noteId !== entity.noteId) {
+      const oldNoteId = entity.noteId;
+      if (dto.noteId) {
+        const noteExists = await this.salesNoteRepository.existsBy({ id: dto.noteId, businessId });
+        if (!noteExists) {
+          throw new BadRequestException(`No se encontró la nota/cotización con id "${dto.noteId}".`);
+        }
+      }
+      
+      entity.noteId = dto.noteId ?? null;
+      
+      // Actualizar la antigua nota para quitarle el evento (si existía)
+      if (oldNoteId) {
+        await this.salesNoteRepository.update({ id: oldNoteId }, { eventId: null });
+      }
+      
+      // Actualizar la nueva nota para asignarle este evento
+      if (dto.noteId) {
+        await this.salesNoteRepository.update({ id: dto.noteId }, { eventId: entity.id });
+      }
+    }
+    
     if (dto.notes !== undefined) entity.notes = dto.notes?.trim() ?? null;
     if (dto.isActive !== undefined) entity.isActive = dto.isActive;
 
