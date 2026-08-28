@@ -30,6 +30,7 @@ export class TransactionsService {
 
   async create(
     businessId: string,
+    userId: string,
     dto: CreateTransactionDto,
   ): Promise<TransactionResponseDto> {
     const [category, paymentMethod, businessEvent] = await Promise.all([
@@ -40,7 +41,7 @@ export class TransactionsService {
 
     const entity = this.transactionRepository.create({
       businessId,
-      ownerId: businessId, // mantenido para retrocompatibilidad
+      ownerId: userId, // mantenido para retrocompatibilidad
       transactionDate: dto.transactionDate,
       type: dto.type,
       description: dto.description?.trim() ?? null,

@@ -91,10 +91,11 @@ export class TransactionsController {
     description: 'Categoría, método de pago o evento inválido/inexistente.',
   })
   create(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentBusiness() businessId: string,
     @Body() dto: CreateTransactionDto,
   ): Promise<TransactionResponseDto> {
-    return this.transactionsService.create(businessId, dto);
+    return this.transactionsService.create(businessId, user.id, dto);
   }
 
   @Get()

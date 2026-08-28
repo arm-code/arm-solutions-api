@@ -83,6 +83,7 @@ export class InventoryMovementsService {
    */
   async create(
     businessId: string,
+    userId: string,
     dto: CreateInventoryMovementDto,
   ): Promise<InventoryMovementResponseDto> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -162,7 +163,7 @@ export class InventoryMovementsService {
       // 6. Crear y persistir el movimiento con snapshots
       const movement = queryRunner.manager.create(InventoryMovement, {
         businessId,
-        ownerId: businessId,
+        ownerId: userId,
         itemId: dto.itemId,
         type: dto.type,
         quantity: dto.quantity,

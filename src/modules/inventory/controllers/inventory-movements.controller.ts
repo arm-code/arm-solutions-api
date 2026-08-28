@@ -14,8 +14,10 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../../auth/decorators/current-business.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
 import { TenantGuard } from '../../auth/guards/tenant.guard';
+import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { CreateInventoryMovementDto } from '../dto/movement/create-inventory-movement.dto';
 import { QueryInventoryMovementsDto } from '../dto/movement/query-inventory-movements.dto';
 import { InventoryMovementsService } from '../services/inventory-movements.service';
@@ -48,9 +50,10 @@ export class InventoryMovementsController {
       'Registrar un movimiento de stock (entrada, salida, traspaso o ajuste). Operación transaccional.',
   })
   create(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentBusiness() businessId: string,
     @Body() dto: CreateInventoryMovementDto,
   ) {
-    return this.service.create(businessId, dto);
+    return this.service.create(businessId, user.id, dto);
   }
 }
