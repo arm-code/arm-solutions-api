@@ -112,6 +112,24 @@ export class BusinessesService {
   }
 
   /**
+   * Obtiene la lista de todos los negocios activos con su información pública y configuración.
+   */
+  async getAllPublicBusinesses(): Promise<PublicBusinessResponseDto[]> {
+    const businesses = await this.businessRepo.find({
+      where: { isActive: true },
+      order: { name: 'ASC' },
+    });
+
+    const results: PublicBusinessResponseDto[] = [];
+    for (const business of businesses) {
+      const configDto = await this.businessConfigService.getConfig(business.id);
+      results.push(PublicBusinessResponseDto.create(business, configDto));
+    }
+
+    return results;
+  }
+
+  /**
    * Obtiene la información pública de un negocio por su slug
    * (incluyendo su configuración comercial e información institucional/cuentas).
    */

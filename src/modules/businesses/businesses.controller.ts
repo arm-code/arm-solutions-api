@@ -39,6 +39,22 @@ export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}
 
   @Public()
+  @Get('public')
+  @ResponseMessage('Lista de negocios públicos obtenida exitosamente.')
+  @ApiOperation({
+    summary:
+      'Obtener la lista de todos los negocios activos con su información pública y configuración.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de negocios públicos y sus configuraciones.',
+    type: [PublicBusinessResponseDto],
+  })
+  getAllPublicBusinesses(): Promise<PublicBusinessResponseDto[]> {
+    return this.businessesService.getAllPublicBusinesses();
+  }
+
+  @Public()
   @Get('public/:slug')
   @ResponseMessage('Información pública del negocio obtenida exitosamente.')
   @ApiOperation({
