@@ -9,19 +9,35 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 1. Configuración de CORS estricto
-  const allowedOrigins: string[] =
-    process.env.ALLOWED_ORIGINS?.split(',') ?? [];
+  // 1. Configuración de CORS estricto
+  const rawOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [];
+  const allowedOrigins: string[] = rawOrigins.map((o) => o.trim());
+
+  logger.log(`Orígenes CORS permitidos: ${JSON.stringify(allowedOrigins)}`);
+
   app.enableCors({
     origin: (
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        logger.error(`Origen bloqueado por CORS: ${origin}`);
-        callback(new Error('No permitido por políticas de CORS'));
+      // 1. Permitir peticiones sin origen (curl, Postman, server-to-server)
+      if (!origin) {
+        return callback(null, true);
       }
+
+      // 2. Permitir cualquier subdominio de dejuarez.mx o arm-solutions.com.mx
+      const isDomainMatch =
+        /^https:\/\/([a-z0-9-]+\.)*dejuarez\.mx$/.test(origin) ||
+        /^https:\/\/([a-z0-9-]+\.)*arm-solutions\.com\.mx$/.test(origin) ||
+        origin.startsWith('http://localhost:');
+
+      // 3. O que esté explícitamente en la variable ALLOWED_ORIGINS limpia
+      if (isDomainMatch || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      logger.error(`Origen bloqueado por CORS: ${origin}`);
+      return callback(new Error('No permitido por políticas de CORS'));
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
