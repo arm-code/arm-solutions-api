@@ -129,4 +129,14 @@ export class UpdateBusinessConfigDto {
   @IsString()
   @MaxLength(150)
   openingHours?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Mensaje pre-rellenado que aparece al tocar el botón de WhatsApp en el landing. ' +
+      'Si es null o vacío, el frontend usa un mensaje genérico.',
+    example: 'Hola, quiero cotizar renta de mobiliario para mi evento',
+  })
+  @IsOptional()
+  @IsString()
+  whatsappMessage?: string;
 }
