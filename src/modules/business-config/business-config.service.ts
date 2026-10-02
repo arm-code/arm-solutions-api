@@ -22,6 +22,7 @@ import {
 } from './dto/testimonial.dto';
 import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
 import { UpdateGalleryItemDto } from './dto/update-gallery-item.dto';
+import { UpdatePaymentCardDto } from './dto/update-payment-card.dto';
 import { BusinessConfig } from './entities/business-config.entity';
 import { BusinessStat } from './entities/business-stat.entity';
 import { BusinessValue } from './entities/business-value.entity';
@@ -51,7 +52,7 @@ export class BusinessConfigService {
     @InjectRepository(Faq)
     private readonly faqRepository: Repository<Faq>,
     private readonly storageService: SupabaseStorageService,
-  ) {}
+  ) { }
 
   // ── Config general ───────────────────────────────────────────────────────────
 
@@ -137,6 +138,31 @@ export class BusinessConfigService {
       clabe: dto.clabe?.trim() ?? null,
       beneficiary: dto.beneficiary.trim(),
     });
+
+    await this.cardRepository.save(card);
+    const updated = await this.getOrCreateDefaultConfig(businessId);
+    return BusinessConfigResponseDto.fromEntity(updated);
+  }
+
+  async updatePaymentCard(
+    businessId: string,
+    cardId: string,
+    dto: UpdatePaymentCardDto,
+  ): Promise<BusinessConfigResponseDto> {
+    const config = await this.getOrCreateDefaultConfig(businessId);
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId, configId: config.id },
+    });
+    if (!card) {
+      throw new NotFoundException(
+        `No se encontró la cuenta bancaria con ID "${cardId}".`,
+      );
+    }
+
+    if (dto.bank !== undefined) card.bank = dto.bank.trim();
+    if (dto.cardNumber !== undefined) card.cardNumber = dto.cardNumber?.trim() ?? null;
+    if (dto.clabe !== undefined) card.clabe = dto.clabe?.trim() ?? null;
+    if (dto.beneficiary !== undefined) card.beneficiary = dto.beneficiary.trim();
 
     await this.cardRepository.save(card);
     const updated = await this.getOrCreateDefaultConfig(businessId);

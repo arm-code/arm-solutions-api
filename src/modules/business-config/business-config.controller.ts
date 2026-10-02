@@ -41,6 +41,7 @@ import {
 import { BusinessConfigResponseDto } from './dto/business-config-response.dto';
 import { CreateFaqDto, UpdateFaqDto } from './dto/faq.dto';
 import { CreatePaymentCardDto } from './dto/create-payment-card.dto';
+import { UpdatePaymentCardDto } from './dto/update-payment-card.dto';
 import {
   CreateTestimonialDto,
   UpdateTestimonialDto,
@@ -66,7 +67,7 @@ export class BusinessConfigController {
   constructor(
     private readonly businessConfigService: BusinessConfigService,
     private readonly businessesService: BusinessesService,
-  ) {}
+  ) { }
 
   // ── Endpoint público ─────────────────────────────────────────────────────────
 
@@ -180,6 +181,22 @@ export class BusinessConfigController {
     @Body() dto: CreatePaymentCardDto,
   ): Promise<BusinessConfigResponseDto> {
     return this.businessConfigService.addPaymentCard(businessId, dto);
+  }
+
+  @Patch('cards/:cardId')
+  @ResponseMessage('Cuenta bancaria actualizada correctamente.')
+  @ApiOperation({ summary: 'Actualizar una cuenta bancaria por su ID.' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Cuenta bancaria actualizada.',
+    type: BusinessConfigResponseDto,
+  })
+  updatePaymentCard(
+    @CurrentBusiness() businessId: string,
+    @Param('cardId', ParseUUIDPipe) cardId: string,
+    @Body() dto: UpdatePaymentCardDto,
+  ): Promise<BusinessConfigResponseDto> {
+    return this.businessConfigService.updatePaymentCard(businessId, cardId, dto);
   }
 
   @Delete('cards/:cardId')
