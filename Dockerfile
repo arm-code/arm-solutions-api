@@ -71,6 +71,6 @@ ENV NODE_ENV=production \
 EXPOSE 3500
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:3500/ || exit 1
+  CMD curl -s -o /dev/null http://localhost:3500/ || exit 1
 
 CMD ["node", "dist/src/main"]

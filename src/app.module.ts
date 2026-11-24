@@ -34,9 +34,11 @@ import { DownloaderModule } from './modules/downloader/downloader.module';
         schema: 'armsolutions',
         autoLoadEntities: true,
         synchronize: false, // ¡Falso en producción! Usaremos migraciones.
-        ssl: {
-          rejectUnauthorized: false, // Requerido para conexiones seguras con Supabase
-        },
+        // Supabase requiere SSL; Postgres propio no (DB_SSL=false)
+        ssl:
+          configService.get<string>('DB_SSL') === 'false'
+            ? false
+            : { rejectUnauthorized: false },
       }),
     }),
 

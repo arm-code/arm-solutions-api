@@ -1,0 +1,65 @@
+# Postgres propio + API. Reemplaza la base de datos de Supabase (Fase 1).
+#
+# Uso local:
+#   docker compose up -d postgres        # solo la base
+#   docker compose run --rm migrate      # aplica migraciones
+#   docker compose up -d api             # levanta el API
+#
+# Variables opcionales (en .env o en el shell):
+#   POSTGRES_PASSWORD   contraseña de la base (cámbiala fuera de local)
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: changarro
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changarro_local}
+      POSTGRES_DB: changarro
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Solo accesible desde la propia máquina, nunca expuesto a la red
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U changarro -d changarro"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Tarea de un solo uso: aplica las migraciones de TypeORM.
+  migrate:
+    build:
+      context: .
+      target: builder
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &db-env
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: changarro
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-changarro_local}
+      DB_NAME: changarro
+      DB_SSL: "false"
+    command: ["pnpm", "run", "typeorm", "migration:run"]
+
+  api:
+    build:
+      context: .
+      target: production
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # .env aporta lo que aún usa Supabase (auth y storage, hasta las fases 2 y 3)
+    env_file: .env
+    environment:
+      <<: *db-env
+    ports:
+      - "127.0.0.1:3500:3500"
+
+volumes:
+  pgdata:

@@ -13,7 +13,6 @@ export default new DataSource({
     schema: 'armsolutions',
     entities: ['dist/src/**/*.entity{.ts,.js}'],
     migrations: ['dist/src/migrations/*{.ts,.js}'],
-    ssl: {
-        rejectUnauthorized: false,
-    },
+    // SSL solo cuando la base lo requiere (Supabase). Postgres local: DB_SSL=false
+    ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
 });
