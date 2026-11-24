@@ -8,7 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { DashboardService } from './dashboard.service';
 import { DashboardQueryDto } from './dto/dashboard-query.dto';
@@ -24,7 +24,7 @@ import { DashboardQueryDto } from './dto/dashboard-query.dto';
   description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
   required: true,
 })
-@UseGuards(SupabaseAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}

@@ -2,11 +2,10 @@ import type { Request } from 'express';
 import type { BusinessRole } from '../../businesses/enums/business-role.enum';
 
 /**
- * Subconjunto de claims del JWT de Supabase Auth que la API necesita.
- * Referencia: https://supabase.com/docs/guides/auth/jwts
+ * Claims del JWT de sesión que emite `AuthService`.
  */
-export interface SupabaseJwtPayload {
-  /** UUID del usuario (auth.users.id). */
+export interface JwtPayload {
+  /** UUID del usuario (users.id). */
   sub: string;
   email?: string;
   role?: string;
@@ -31,7 +30,7 @@ export interface AuthenticatedUser {
 /**
  * Extensión de `Request` de Express con los campos inyectados por los guards.
  *
- * - `user`          → inyectado por `SupabaseAuthGuard`
+ * - `user`          → inyectado por `JwtAuthGuard`
  * - `businessId`    → inyectado por `TenantGuard`
  * - `businessRole`  → inyectado por `TenantGuard`
  */

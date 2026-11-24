@@ -9,12 +9,12 @@ import { Reflector } from '@nestjs/core';
 import { BusinessesService } from '../../businesses/businesses.service';
 import { BusinessRole } from '../../businesses/enums/business-role.enum';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import type { AuthenticatedRequest } from './supabase-auth.guard';
+import type { AuthenticatedRequest } from './jwt-auth.guard';
 
 /**
  * Guard de tenant (multi-negocio).
  *
- * Debe usarse DESPUÉS de `SupabaseAuthGuard` (que ya validó el JWT y
+ * Debe usarse DESPUÉS de `JwtAuthGuard` (que ya validó el JWT y
  * pobló `request.user`).
  *
  * Flujo:
@@ -27,7 +27,7 @@ import type { AuthenticatedRequest } from './supabase-auth.guard';
  *
  * Uso en un controller:
  * ```ts
- * @UseGuards(SupabaseAuthGuard, TenantGuard)
+ * @UseGuards(JwtAuthGuard, TenantGuard)
  * @Get()
  * findAll(
  *   @CurrentBusiness() businessId: string,

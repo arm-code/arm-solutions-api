@@ -1,20 +1,22 @@
 import { Global, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { BusinessesModule } from '../businesses/businesses.module';
-import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { User } from './entities/user.entity';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TenantGuard } from './guards/tenant.guard';
 
 /**
- * Módulo global: expone `SupabaseAuthGuard` y `TenantGuard` para que
- * cualquier módulo de feature pueda usarlos sin importarlos explícitamente.
- *
- * `BusinessesModule` se importa aquí para que `TenantGuard` pueda
- * inyectar `BusinessesService` sin dependencias circulares.
+ * Módulo global: expone `JwtAuthGuard` y `TenantGuard` para que cualquier
+ * módulo de feature los use sin importarlos. `BusinessesModule` se importa
+ * aquí para que `TenantGuard` pueda inyectar `BusinessesService`.
  */
 @Global()
 @Module({
-  imports: [BusinessesModule],
-  providers: [SupabaseAuthGuard, TenantGuard],
-  exports: [SupabaseAuthGuard, TenantGuard],
+  imports: [TypeOrmModule.forFeature([User]), BusinessesModule],
+  controllers: [AuthController],
+  providers: [AuthService, JwtAuthGuard, TenantGuard],
+  exports: [JwtAuthGuard, TenantGuard],
 })
 export class AuthModule {}
-

@@ -19,14 +19,14 @@ import {
 import type { Response } from 'express';
 import * as fs from 'fs';
 
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DownloadAudioDto } from './dto/download-audio.dto';
 import { GetMediaInfoDto } from './dto/get-media-info.dto';
 import { DownloaderService } from './downloader.service';
 
 @ApiTags('Downloader — Audio de YouTube')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('download')
 export class DownloaderController {
   private readonly logger = new Logger(DownloaderController.name);

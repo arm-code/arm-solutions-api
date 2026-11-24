@@ -19,7 +19,7 @@ export class GalleryItem extends BaseEntity {
   @Column({ name: 'config_id', type: 'uuid' })
   configId: string;
 
-  /** URL pública del objeto en Supabase Storage. */
+  /** URL pública del objeto en el almacenamiento del servidor. */
   @Column({ type: 'text' })
   url: string;
 

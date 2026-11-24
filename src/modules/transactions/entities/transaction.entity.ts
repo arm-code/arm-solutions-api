@@ -24,7 +24,7 @@ import { TransactionCategory } from '../../categories/entities/transaction-categ
  *    condiciones de carrera y reemplaza la fórmula frágil de Excel
  *    `="FOL-" & TEXT(MID(A4,5,4)+1,"0000")`, que dependía de leer la fila
  *    anterior y se rompía al insertar/eliminar filas.
- *  - `ownerId` -> multi-tenant: cada usuario de Supabase solo ve sus propios
+ *  - `ownerId` -> multi-tenant: cada usuario solo ve sus propios
  *    movimientos (se refuerza con Row Level Security en la base de datos).
  */
 @Entity({ name: 'transactions', schema: 'armsolutions' })

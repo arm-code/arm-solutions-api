@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DownloaderController } from './downloader.controller';
 import { DownloaderService } from './downloader.service';
 
@@ -21,8 +21,8 @@ import { DownloaderService } from './downloader.service';
   controllers: [DownloaderController],
   providers: [
     DownloaderService,
-    // SupabaseAuthGuard requiere Reflector para el soporte de @Public()
-    SupabaseAuthGuard,
+    // JwtAuthGuard requiere Reflector para el soporte de @Public()
+    JwtAuthGuard,
     Reflector,
   ],
 })

@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { PaymentMethodResponseDto } from './dto/payment-method-response.dto';
@@ -32,7 +32,7 @@ import { PaymentMethodsService } from './payment-methods.service';
 /**
  * Catálogo de métodos de pago (CASH, TRANSFER, ...).
  *
- * Todos los endpoints requieren un JWT válido de Supabase Auth
+ * Todos los endpoints requieren un sesión válida (JWT)
  * (`Authorization: Bearer <access_token>`).
  */
 @ApiTags('Payment Methods')
@@ -42,7 +42,7 @@ import { PaymentMethodsService } from './payment-methods.service';
   description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
   required: true,
 })
-@UseGuards(SupabaseAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('payment-methods')
 export class PaymentMethodsController {
   constructor(private readonly paymentMethodsService: PaymentMethodsService) {}

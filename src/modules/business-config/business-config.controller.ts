@@ -25,7 +25,7 @@ import {
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { Public } from '../auth/decorators/public.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { BusinessesService } from '../businesses/businesses.service';
 import { PublicBusinessResponseDto } from '../businesses/dto/public-business-response.dto';
@@ -61,7 +61,7 @@ import { UpdateGalleryItemDto } from './dto/update-gallery-item.dto';
     'UUID del negocio activo. Requerido para todos los endpoints de este módulo (excepto endpoints públicos).',
   required: false,
 })
-@UseGuards(SupabaseAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('config')
 export class BusinessConfigController {
   constructor(
@@ -131,7 +131,7 @@ export class BusinessConfigController {
   @ApiOperation({
     summary:
       'Subir o reemplazar el logotipo del negocio. ' +
-      'La imagen se almacena en Supabase Storage y se actualiza la URL en la configuración.',
+      'La imagen se almacena en el almacenamiento del servidor y se actualiza la URL en la configuración.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -221,7 +221,7 @@ export class BusinessConfigController {
   @ApiOperation({
     summary:
       'Subir una imagen al catálogo/galería del negocio. ' +
-      'Se almacena en Supabase Storage. ' +
+      'Se almacena en el almacenamiento del servidor. ' +
       'Envía la imagen en el campo "file" y los metadatos como campos de formulario.',
   })
   @ApiConsumes('multipart/form-data')
@@ -279,7 +279,7 @@ export class BusinessConfigController {
   @Delete('gallery/:itemId')
   @ResponseMessage('Imagen eliminada de la galería correctamente.')
   @ApiOperation({
-    summary: 'Eliminar una imagen de la galería (BD + Supabase Storage).',
+    summary: 'Eliminar una imagen de la galería (BD + disco).',
   })
   @SwaggerApiResponse({
     status: 200,

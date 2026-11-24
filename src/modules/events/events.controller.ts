@@ -20,7 +20,7 @@ import {
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../auth/decorators/current-business.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { BusinessEventResponseDto } from './dto/business-event-response.dto';
@@ -41,7 +41,7 @@ import { EventsService } from './events.service';
   description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
   required: true,
 })
-@UseGuards(SupabaseAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}

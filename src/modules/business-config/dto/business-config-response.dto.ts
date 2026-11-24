@@ -40,7 +40,7 @@ export class GalleryItemResponseDto {
   @ApiProperty({ example: 'uuid-abc-123' })
   id: string;
 
-  @ApiProperty({ example: 'https://cdn.supabase.co/storage/v1/object/public/businesses/abc/gallery/img.jpg' })
+  @ApiProperty({ example: 'https://api.ejemplo.mx/files/abc/gallery/img.jpg' })
   url: string;
 
   @ApiPropertyOptional({ example: 'Mesas y sillas', nullable: true })
@@ -176,7 +176,7 @@ export class BusinessConfigResponseDto {
   @ApiProperty({ example: 'Eventos Mendoza' })
   name: string;
 
-  @ApiPropertyOptional({ example: 'https://cdn.supabase.co/storage/v1/object/public/businesses/abc/logo/uuid.png', nullable: true })
+  @ApiPropertyOptional({ example: 'https://api.ejemplo.mx/files/abc/logo/uuid.png', nullable: true })
   logoUrl: string | null;
 
   @ApiPropertyOptional({ example: '656 123 4567', nullable: true })

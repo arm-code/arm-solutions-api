@@ -80,7 +80,7 @@ async function bootstrap() {
       'API central de herramientas personales y gestión de negocios',
     )
     .setVersion('1.0')
-    .addBearerAuth() // Para cuando integres la autenticación de Supabase
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

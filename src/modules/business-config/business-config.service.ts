@@ -93,7 +93,7 @@ export class BusinessConfigService {
   // ── Logo ─────────────────────────────────────────────────────────────────────
 
   /**
-   * Sube el logotipo del negocio al bucket de Supabase Storage y actualiza la URL en BD.
+   * Sube el logotipo del negocio al almacenamiento del servidor y actualiza la URL en BD.
    * Si ya existía un logo previo, elimina el archivo anterior del bucket.
    */
   async uploadLogo(
@@ -191,7 +191,7 @@ export class BusinessConfigService {
   // ── Gallery ──────────────────────────────────────────────────────────────────
 
   /**
-   * Sube una imagen al bucket de Supabase Storage y registra el item en la galería.
+   * Sube una imagen al almacenamiento del servidor y registra el item en la galería.
    */
   async addGalleryImage(
     businessId: string,
@@ -242,7 +242,7 @@ export class BusinessConfigService {
   }
 
   /**
-   * Elimina un item de galería de la BD y su imagen de Supabase Storage.
+   * Elimina un item de galería de la BD y su imagen del almacenamiento del servidor.
    */
   async removeGalleryItem(
     businessId: string,

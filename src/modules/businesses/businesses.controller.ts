@@ -17,7 +17,7 @@ import {
 import { ResponseMessage } from '../../common/interceptors/transform.interceptor';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { BusinessesService } from './businesses.service';
 import { BusinessResponseDto } from './dto/business-response.dto';
@@ -33,7 +33,7 @@ import { PublicBusinessResponseDto } from './dto/public-business-response.dto';
  */
 @ApiTags('Businesses')
 @ApiBearerAuth()
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('businesses')
 export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}

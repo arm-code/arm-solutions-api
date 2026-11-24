@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../../../common/interceptors/transform.interceptor';
 import { CurrentBusiness } from '../../auth/decorators/current-business.decorator';
-import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../../auth/guards/tenant.guard';
 import { CreateInventoryItemDto } from '../dto/item/create-inventory-item.dto';
 import { QueryInventoryItemsDto } from '../dto/item/query-inventory-items.dto';
@@ -31,7 +31,7 @@ import { InventoryItemsService } from '../services/inventory-items.service';
 @ApiTags('Inventory - Items')
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Business-ID', required: true, description: 'UUID del negocio activo.' })
-@UseGuards(SupabaseAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('inventory/items')
 export class InventoryItemsController {
   constructor(private readonly service: InventoryItemsService) {}

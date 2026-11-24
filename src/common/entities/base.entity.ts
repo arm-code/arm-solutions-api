@@ -6,7 +6,7 @@ import {
 
 /**
  * Campos de auditoría comunes a todas las tablas del dominio de negocio.
- * `id` usa UUID para ser consistente con el esquema `auth.users` de Supabase
+ * `id` usa UUID para ser consistente entre tablas
  * y evitar exponer IDs secuenciales/adivinables en la API pública.
  */
 export abstract class BaseEntity {

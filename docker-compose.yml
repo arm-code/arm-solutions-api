@@ -54,7 +54,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # .env aporta lo que aún usa Supabase (auth y storage, hasta las fases 2 y 3)
+    # .env aporta JWT_SECRET, ALLOWED_ORIGINS, DOCS_*, COOKIE_*, etc.
     env_file: .env
     environment:
       <<: *db-env
