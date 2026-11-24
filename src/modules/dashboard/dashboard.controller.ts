@@ -1,7 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
@@ -19,11 +18,6 @@ import { DashboardQueryDto } from './dto/dashboard-query.dto';
  */
 @ApiTags('Dashboard')
 @ApiBearerAuth()
-@ApiHeader({
-  name: 'X-Business-ID',
-  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
-  required: true,
-})
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('dashboard')
 export class DashboardController {

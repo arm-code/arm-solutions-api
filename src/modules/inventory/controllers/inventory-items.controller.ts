@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -30,7 +29,6 @@ import { InventoryItemsService } from '../services/inventory-items.service';
 
 @ApiTags('Inventory - Items')
 @ApiBearerAuth()
-@ApiHeader({ name: 'X-Business-ID', required: true, description: 'UUID del negocio activo.' })
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('inventory/items')
 export class InventoryItemsController {

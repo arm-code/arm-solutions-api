@@ -1,9 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Injectable,
-  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { BusinessesService } from '../../businesses/businesses.service';
@@ -12,37 +10,18 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { AuthenticatedRequest } from './jwt-auth.guard';
 
 /**
- * Guard de tenant (multi-negocio).
+ * Guard de negocio.
  *
- * Debe usarse DESPUÉS de `JwtAuthGuard` (que ya validó el JWT y
- * pobló `request.user`).
+ * Debe usarse DESPUÉS de `JwtAuthGuard` (que ya pobló `request.user`).
+ * Cada instancia atiende a un solo negocio, así que el cliente NO manda
+ * ningún identificador de negocio: el guard lo resuelve y valida que el
+ * usuario pertenezca a él.
  *
- * Flujo:
- *   1. Lee el header `x-business-id` del request.
- *   2. Valida que sea un UUID válido.
- *   3. Consulta `BusinessesService.validateUserInBusiness` para verificar
- *      que el usuario autenticado pertenece a ese negocio.
- *   4. Inyecta `request.businessId` y `request.businessRole` para que los
- *      controllers y servicios los consuman.
- *
- * Uso en un controller:
- * ```ts
- * @UseGuards(JwtAuthGuard, TenantGuard)
- * @Get()
- * findAll(
- *   @CurrentBusiness() businessId: string,
- *   @CurrentBusinessRole() role: BusinessRole,
- * ) { ... }
- * ```
+ * Inyecta `request.businessId` y `request.businessRole` para los controllers
+ * (`@CurrentBusiness()` y `@CurrentBusinessRole()`).
  */
 @Injectable()
 export class TenantGuard implements CanActivate {
-  private readonly logger = new Logger(TenantGuard.name);
-
-  /** Regex para validar UUID v4 sin dependencias externas. */
-  private readonly UUID_REGEX =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
   constructor(
     private readonly businessesService: BusinessesService,
     private readonly reflector: Reflector,
@@ -53,44 +32,20 @@ export class TenantGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) {
-      return true;
-    }
+    if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<
       AuthenticatedRequest & { businessId?: string; businessRole?: BusinessRole }
     >();
 
-    // 1. Leer el header x-business-id
-    const businessId = request.headers['x-business-id'] as string | undefined;
-
-    if (!businessId) {
-      throw new ForbiddenException(
-        'Se requiere el header "X-Business-ID" para acceder a este recurso.',
-      );
-    }
-
-    // 2. Validar formato UUID
-    if (!this.UUID_REGEX.test(businessId)) {
-      throw new ForbiddenException(
-        'El header "X-Business-ID" no es un UUID válido.',
-      );
-    }
-
-    // 3. Validar membresía del usuario en el negocio
+    const business = await this.businessesService.getCurrentBusiness();
     const role = await this.businessesService.validateUserInBusiness(
       request.user.id,
-      businessId,
+      business.id,
     );
 
-    // 4. Inyectar en el request para consumo en controllers/services
-    request.businessId = businessId;
+    request.businessId = business.id;
     request.businessRole = role;
-
-    this.logger.debug(
-      `Usuario ${request.user.id} accedió al negocio ${businessId} con rol "${role}".`,
-    );
-
     return true;
   }
 }

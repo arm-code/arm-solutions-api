@@ -17,7 +17,6 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
-  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
@@ -55,12 +54,6 @@ import { UpdateGalleryItemDto } from './dto/update-gallery-item.dto';
  */
 @ApiTags('Business Config')
 @ApiBearerAuth()
-@ApiHeader({
-  name: 'X-Business-ID',
-  description:
-    'UUID del negocio activo. Requerido para todos los endpoints de este módulo (excepto endpoints públicos).',
-  required: false,
-})
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('config')
 export class BusinessConfigController {
@@ -72,20 +65,18 @@ export class BusinessConfigController {
   // ── Endpoint público ─────────────────────────────────────────────────────────
 
   @Public()
-  @Get('public/:slug')
+  @Get('public')
   @ResponseMessage('Información pública del negocio obtenida correctamente.')
   @ApiOperation({
-    summary: 'Obtener la configuración e información pública del negocio por su slug.',
+    summary: 'Obtener la configuración e información pública del negocio.',
   })
   @SwaggerApiResponse({
     status: 200,
     description: 'Configuración pública del negocio.',
     type: PublicBusinessResponseDto,
   })
-  getPublicConfigBySlug(
-    @Param('slug') slug: string,
-  ): Promise<PublicBusinessResponseDto> {
-    return this.businessesService.getPublicBusinessBySlug(slug);
+  getPublicConfig(): Promise<PublicBusinessResponseDto> {
+    return this.businessesService.getPublicBusiness();
   }
 
   // ── Config general ───────────────────────────────────────────────────────────

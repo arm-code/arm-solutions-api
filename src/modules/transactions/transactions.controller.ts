@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiHeader,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
@@ -37,11 +36,6 @@ import { TransactionsService } from './transactions.service';
  */
 @ApiTags('Transactions')
 @ApiBearerAuth()
-@ApiHeader({
-  name: 'X-Business-ID',
-  description: 'UUID del negocio activo. Requerido para todos los endpoints de este módulo.',
-  required: true,
-})
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('transactions')
 export class TransactionsController {

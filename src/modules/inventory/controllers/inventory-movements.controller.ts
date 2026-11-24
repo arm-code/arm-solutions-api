@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiHeader,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,7 +23,6 @@ import { InventoryMovementsService } from '../services/inventory-movements.servi
 
 @ApiTags('Inventory - Movements')
 @ApiBearerAuth()
-@ApiHeader({ name: 'X-Business-ID', required: true, description: 'UUID del negocio activo.' })
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('inventory/movements')
 export class InventoryMovementsController {

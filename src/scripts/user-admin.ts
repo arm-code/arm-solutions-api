@@ -4,6 +4,10 @@
  *
  *   node dist/src/scripts/user-admin.js list
  *   node dist/src/scripts/user-admin.js set-password <email> [--business <slug>]
+ *   node dist/src/scripts/user-admin.js create-business "<nombre>" <slug>
+ *
+ * `create-business` crea el negocio de una instancia nueva con sus catálogos
+ * por defecto (formas de pago y categorías de movimientos).
  *
  * `set-password` crea el usuario si no existe o cambia su contraseña. Con
  * `--business` lo agrega además como admin de ese negocio. La contraseña se
@@ -113,7 +117,48 @@ async function main() {
       return;
     }
 
-    console.error('Uso: list | set-password <email> [--business <slug>]');
+    if (command === 'create-business' && emailArg && rest[0]) {
+      const name = emailArg.trim();
+      const slug = rest[0].trim();
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+        throw new Error('El slug solo puede tener minúsculas, números y guiones.');
+      }
+      // Una instancia = un negocio (los códigos de catálogo son únicos en toda la base)
+      const existing = await db.query(`SELECT slug FROM armsolutions.businesses LIMIT 1`);
+      if (existing.rows[0]) {
+        throw new Error(`Esta instancia ya tiene un negocio ("${existing.rows[0].slug}"). Usa una base nueva para otro negocio.`);
+      }
+      await db.query('BEGIN');
+      try {
+        const { rows } = await db.query(
+          `INSERT INTO armsolutions.businesses (name, slug) VALUES ($1, $2) RETURNING id`,
+          [name, slug],
+        );
+        const id = rows[0].id as string;
+        await db.query(
+          `INSERT INTO armsolutions.payment_methods (code, name, business_id) VALUES
+             ('CASH','Efectivo',$1), ('TRANSFER','Transferencia',$1), ('CARD','Tarjeta',$1)
+           ON CONFLICT DO NOTHING`,
+          [id],
+        );
+        await db.query(
+          `INSERT INTO armsolutions.transaction_categories (code, name, business_id) VALUES
+             ('RENTA','Renta de mobiliario/equipo',$1), ('GASOLINA','Gasolina',$1),
+             ('COMIDAS','Comidas',$1), ('SUELDOS','Sueldos',$1), ('FLETES','Fletes',$1),
+             ('MANTENIMIENTO','Mantenimiento',$1), ('OTROS','Otros',$1)
+           ON CONFLICT DO NOTHING`,
+          [id],
+        );
+        await db.query('COMMIT');
+      } catch (err) {
+        await db.query('ROLLBACK');
+        throw err;
+      }
+      console.log(`OK: negocio "${name}" creado (slug ${slug}). Define BUSINESS_SLUG=${slug} en el .env del API.`);
+      return;
+    }
+
+    console.error('Uso: list | set-password <email> [--business <slug>] | create-business "<nombre>" <slug>');
     process.exitCode = 1;
   } finally {
     await db.end();

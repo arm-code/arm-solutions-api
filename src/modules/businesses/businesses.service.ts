@@ -1,23 +1,30 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BusinessConfigService } from '../business-config/business-config.service';
 import { BusinessResponseDto } from './dto/business-response.dto';
-import { CreateBusinessDto } from './dto/create-business.dto';
 import { PublicBusinessResponseDto } from './dto/public-business-response.dto';
 import { Business } from './entities/business.entity';
 import { BusinessUser } from './entities/business-user.entity';
 import { BusinessRole } from './enums/business-role.enum';
 
+/** Cuánto se recuerda el negocio en memoria antes de volver a consultarlo. */
+const CURRENT_BUSINESS_TTL_MS = 60_000;
+
+/**
+ * Una instancia del sistema atiende a UN negocio. Se elige con la variable
+ * `BUSINESS_SLUG`; si no está definida se usa el negocio activo más antiguo.
+ */
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
+  private current: { business: Business; at: number } | null = null;
 
   constructor(
     @InjectRepository(Business)
@@ -25,22 +32,54 @@ export class BusinessesService {
     @InjectRepository(BusinessUser)
     private readonly memberRepo: Repository<BusinessUser>,
     private readonly businessConfigService: BusinessConfigService,
+    private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Retorna todos los negocios a los que pertenece el usuario autenticado,
-   * incluyendo su rol en cada uno.
-   */
-  async getMyBusinesses(userId: string): Promise<BusinessResponseDto[]> {
-    const memberships = await this.memberRepo.find({
-      where: { userId },
-      relations: ['business'],
-      order: { createdAt: 'ASC' },
-    });
+  /** Negocio de esta instancia (con caché corta en memoria). */
+  async getCurrentBusiness(): Promise<Business> {
+    if (this.current && Date.now() - this.current.at < CURRENT_BUSINESS_TTL_MS) {
+      return this.current.business;
+    }
 
-    return memberships
-      .filter((m) => m.business?.isActive)
-      .map((m) => BusinessResponseDto.fromEntities(m.business, m));
+    const slug = this.configService.get<string>('BUSINESS_SLUG')?.trim();
+    let business: Business | null;
+
+    if (slug) {
+      business = await this.businessRepo.findOne({ where: { slug, isActive: true } });
+      if (!business) {
+        throw new NotFoundException(`BUSINESS_SLUG="${slug}" no corresponde a un negocio activo.`);
+      }
+    } else {
+      const active = await this.businessRepo.find({
+        where: { isActive: true },
+        order: { createdAt: 'ASC' },
+        take: 2,
+      });
+      business = active[0] ?? null;
+      if (!business) {
+        throw new NotFoundException(
+          'No hay un negocio configurado. Créalo con: node dist/src/scripts/user-admin.js create-business "<nombre>" <slug>',
+        );
+      }
+      if (active.length > 1) {
+        this.logger.warn(
+          `Hay varios negocios activos; se usa "${business.slug}". Define BUSINESS_SLUG para elegir uno.`,
+        );
+      }
+    }
+
+    this.current = { business, at: Date.now() };
+    return business;
+  }
+
+  /** El negocio de la instancia, con el rol del usuario si pertenece a él. */
+  async getMyBusinesses(userId: string): Promise<BusinessResponseDto[]> {
+    const business = await this.getCurrentBusiness();
+    const membership = await this.memberRepo.findOne({
+      where: { userId, businessId: business.id },
+      relations: ['business'],
+    });
+    return membership ? [BusinessResponseDto.fromEntities(business, membership)] : [];
   }
 
   /**
@@ -59,99 +98,21 @@ export class BusinessesService {
     });
 
     if (!membership || !membership.business?.isActive) {
-      this.logger.warn(
-        `Usuario ${userId} intentó acceder al negocio ${businessId} sin permisos.`,
-      );
-      throw new ForbiddenException(
-        'No tienes acceso a este negocio o el negocio no existe.',
-      );
+      this.logger.warn(`Usuario ${userId} sin permisos en el negocio ${businessId}.`);
+      throw new ForbiddenException('No tienes acceso a este negocio.');
     }
 
     return membership.role;
   }
 
-  /**
-   * Crea un nuevo negocio y agrega al creador como `admin`.
-   * También inserta los catálogos default (payment_methods, categories).
-   */
-  async createBusiness(
-    userId: string,
-    dto: CreateBusinessDto,
-  ): Promise<BusinessResponseDto> {
-    const slug = dto.slug ?? this.generateSlug(dto.name);
-
-    // Verificar unicidad del slug
-    const existing = await this.businessRepo.findOne({ where: { slug } });
-    if (existing) {
-      throw new ConflictException(
-        `Ya existe un negocio con el slug "${slug}". Elige otro nombre o especifica un slug diferente.`,
-      );
-    }
-
-    const business = this.businessRepo.create({
-      name: dto.name.trim(),
-      slug,
-      logoUrl: null,
-      isActive: true,
-    });
-
-    const saved = await this.businessRepo.save(business);
-
-    // Agregar al creador como admin
-    const membership = this.memberRepo.create({
-      businessId: saved.id,
-      userId,
-      role: BusinessRole.ADMIN,
-    });
-
-    const savedMembership = await this.memberRepo.save(membership);
-
-    this.logger.log(`Negocio creado: ${saved.name} (${saved.id}) por usuario ${userId}`);
-
-    return BusinessResponseDto.fromEntities(saved, savedMembership);
-  }
-
-  /**
-   * Obtiene la lista de todos los negocios activos con su información pública y configuración.
-   */
-  async getAllPublicBusinesses(): Promise<PublicBusinessResponseDto[]> {
-    const businesses = await this.businessRepo.find({
-      where: { isActive: true },
-      order: { name: 'ASC' },
-    });
-
-    const results: PublicBusinessResponseDto[] = [];
-    for (const business of businesses) {
-      const configDto = await this.businessConfigService.getConfig(business.id);
-      results.push(PublicBusinessResponseDto.create(business, configDto));
-    }
-
-    return results;
-  }
-
-  /**
-   * Obtiene la información pública de un negocio por su slug
-   * (incluyendo su configuración comercial e información institucional/cuentas).
-   */
-  async getPublicBusinessBySlug(
-    slug: string,
-  ): Promise<PublicBusinessResponseDto> {
-    const business = await this.businessRepo.findOne({
-      where: { slug, isActive: true },
-    });
-
-    if (!business) {
-      throw new NotFoundException(`Negocio con slug "${slug}" no encontrado.`);
-    }
-
+  /** Información pública (landing) del negocio de esta instancia. */
+  async getPublicBusiness(): Promise<PublicBusinessResponseDto> {
+    const business = await this.getCurrentBusiness();
     const configDto = await this.businessConfigService.getConfig(business.id);
     return PublicBusinessResponseDto.create(business, configDto);
   }
 
-  /**
-   * Obtiene los datos de un negocio por ID (sin validación de membresía).
-   * Uso interno para contextos donde ya validamos membresía previamente.
-   */
+  /** Datos de un negocio por ID (uso interno, sin validar membresía). */
   async findById(businessId: string): Promise<Business> {
     const business = await this.businessRepo.findOne({
       where: { id: businessId, isActive: true },
@@ -162,23 +123,5 @@ export class BusinessesService {
     }
 
     return business;
-  }
-
-  // ── Helpers privados ──────────────────────────────────────────────────────
-
-  /**
-   * Genera un slug URL-amigable a partir del nombre del negocio.
-   * Ej: "Eventos Mendoza S.A." → "eventos-mendoza-sa"
-   */
-  private generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // eliminar acentos
-      .replace(/[^a-z0-9\s-]/g, '')   // solo alfanuméricos y espacios
-      .trim()
-      .replace(/\s+/g, '-')           // espacios → guiones
-      .replace(/-+/g, '-')            // guiones múltiples → uno solo
-      .substring(0, 100);
   }
 }
