@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SupabaseStorageService } from '../../common/services/supabase-storage.service';
+import { StorageService } from '../../common/services/storage.service';
 import { BusinessConfigResponseDto } from './dto/business-config-response.dto';
 import {
   CreateBusinessStatDto,
@@ -51,7 +51,7 @@ export class BusinessConfigService {
     private readonly testimonialRepository: Repository<Testimonial>,
     @InjectRepository(Faq)
     private readonly faqRepository: Repository<Faq>,
-    private readonly storageService: SupabaseStorageService,
+    private readonly storageService: StorageService,
   ) { }
 
   // ── Config general ───────────────────────────────────────────────────────────

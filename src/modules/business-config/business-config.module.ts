@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SupabaseStorageService } from '../../common/services/supabase-storage.service';
+import { StorageService } from '../../common/services/storage.service';
 import { BusinessConfigController } from './business-config.controller';
 import { BusinessConfigService } from './business-config.service';
 import { BusinessConfig } from './entities/business-config.entity';
@@ -24,7 +24,7 @@ import { Testimonial } from './entities/testimonial.entity';
     ]),
   ],
   controllers: [BusinessConfigController],
-  providers: [BusinessConfigService, SupabaseStorageService],
+  providers: [BusinessConfigService, StorageService],
   exports: [BusinessConfigService],
 })
 export class BusinessConfigModule {}

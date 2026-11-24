@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { StorageService } from './common/services/storage.service';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -6,7 +8,7 @@ import basicAuth from 'express-basic-auth';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // 1. Configuración de CORS estricto
   // 1. Configuración de CORS estricto
@@ -41,6 +43,20 @@ async function bootstrap() {
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+  });
+
+  // Archivos subidos (logos, galería): públicos y de solo lectura en /files.
+  // Los nombres son UUID, así que el contenido nunca cambia bajo la misma URL.
+  app.useStaticAssets(app.get(StorageService, { strict: false }).getRootDir(), {
+    prefix: '/files/',
+    index: false,
+    dotfiles: 'deny',
+    maxAge: '365d',
+    immutable: true,
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
   });
 
   // 2. Tipado Estricto y Validación Global de DTOs

@@ -58,8 +58,13 @@ services:
     env_file: .env
     environment:
       <<: *db-env
+      STORAGE_DIR: /app/storage
+      STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-http://localhost:3500/files}
+    volumes:
+      - storage:/app/storage
     ports:
       - "127.0.0.1:3500:3500"
 
 volumes:
   pgdata:
+  storage:

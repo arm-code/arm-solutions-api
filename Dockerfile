@@ -58,7 +58,8 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/dist ./dist
 
 # Usuario no-root por seguridad
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/storage && chown appuser:appgroup /app/storage
 USER appuser
 
 # Variables de entorno por defecto (sobreescribibles en docker-compose / k8s)
